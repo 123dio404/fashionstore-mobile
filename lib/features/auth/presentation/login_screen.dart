@@ -53,17 +53,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(labelText: 'Correo'),
-                validator: (value) => value != null && value.contains('@') ? null : 'Correo inválido',
+                validator: (value) => value != null && value.contains('@')
+                    ? null
+                    : 'Correo inválido',
               ),
               TextFormField(
                 controller: _password,
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Contraseña'),
-                validator: (value) => value != null && value.length >= 8 ? null : 'Mínimo 8 caracteres',
+                validator: (value) => value != null && value.length >= 8
+                    ? null
+                    : 'Mínimo 8 caracteres',
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
-                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                Text(_error!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
               const SizedBox(height: 24),
               FilledButton(

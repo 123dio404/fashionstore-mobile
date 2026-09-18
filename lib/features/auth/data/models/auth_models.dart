@@ -26,12 +26,12 @@ enum Role {
   const Role(this.value);
   final String value;
 
-  static Role fromJson(String value) =>
-      Role.values.firstWhere((role) => role.value == value, orElse: () => Role.cliente);
+  static Role fromJson(String value) => Role.values
+      .firstWhere((role) => role.value == value, orElse: () => Role.cliente);
 }
 
 class UserResponse {
-  final String id;
+  final int id;
   final String email;
   final String fullName;
   final Role role;
@@ -46,11 +46,11 @@ class UserResponse {
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) => UserResponse(
-        id: json['id'] as String,
-        email: json['email'] as String,
-        fullName: json['full_name'] as String,
-        role: Role.fromJson(json['role'] as String),
-        isActive: json['is_active'] as bool,
+        id: int.tryParse('${json['id']}') ?? 0,
+        email: '${json['email'] ?? ''}',
+        fullName: '${json['full_name'] ?? ''}',
+        role: Role.fromJson('${json['role'] ?? 'Cliente'}'),
+        isActive: json['is_active'] as bool? ?? true,
       );
 }
 

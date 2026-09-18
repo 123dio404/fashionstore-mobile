@@ -29,7 +29,9 @@ class ApiClient {
           final detail = error.response?.data is Map
               ? error.response?.data['detail']
               : null;
-          final message = detail is String ? detail : 'No fue posible conectar con el servidor.';
+          final message = detail is String
+              ? detail
+              : 'No fue posible conectar con el servidor.';
           handler.reject(
             DioException(
               requestOptions: error.requestOptions,

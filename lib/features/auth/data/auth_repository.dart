@@ -14,7 +14,8 @@ class AuthRepository {
         _storage = storage ?? SecureStorage();
 
   Future<UserResponse> register(RegisterRequest request) async {
-    final response = await _dio.post(ApiConstants.register, data: request.toJson());
+    final response =
+        await _dio.post(ApiConstants.register, data: request.toJson());
     return UserResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -24,13 +25,19 @@ class AuthRepository {
       data: {'username': email, 'password': password},
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );
-    final result = LoginResponse.fromJson(response.data as Map<String, dynamic>);
+    final result =
+        LoginResponse.fromJson(response.data as Map<String, dynamic>);
     await _storage.saveToken(result.accessToken);
     return result;
   }
 
   Future<UserResponse> currentUser() async {
     final response = await _dio.get(ApiConstants.currentUser);
+    return UserResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<UserResponse> updateProfile(Map<String, dynamic> data) async {
+    final response = await _dio.put(ApiConstants.currentUser, data: data);
     return UserResponse.fromJson(response.data as Map<String, dynamic>);
   }
 

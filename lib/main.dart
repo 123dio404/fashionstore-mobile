@@ -1,46 +1,33 @@
 import 'package:flutter/material.dart';
-
+import 'core/network/api_client.dart';
+import 'features/app_repository.dart';
 import 'features/auth/data/auth_repository.dart';
-import 'features/auth/presentation/login_screen.dart';
+import 'features/dashboard_screen.dart';
 import 'features/catalog/data/catalog_repository.dart';
-import 'features/catalog/data/models/catalog_models.dart';
-import 'features/catalog/presentation/catalog_screen.dart';
-import 'features/catalog/presentation/product_detail_screen.dart';
 
 void main() {
-  final authRepository = AuthRepository();
-  final catalogRepository = CatalogRepository();
+  final client = ApiClient();
+  final auth = AuthRepository(client: client);
   runApp(FashionStoreApp(
-    authRepository: authRepository,
-    catalogRepository: catalogRepository,
-  ));
+      auth: auth,
+      catalog: CatalogRepository(client: client),
+      app: AppRepository(client: client)));
 }
 
 class FashionStoreApp extends StatelessWidget {
-  final AuthRepository authRepository;
-  final CatalogRepository catalogRepository;
-
-  const FashionStoreApp({
-    super.key,
-    required this.authRepository,
-    required this.catalogRepository,
-  });
-
+  final AuthRepository auth;
+  final CatalogRepository catalog;
+  final AppRepository app;
+  const FashionStoreApp(
+      {super.key,
+      required this.auth,
+      required this.catalog,
+      required this.app});
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'FashionStore',
-        theme: ThemeData(
+  Widget build(BuildContext c) => MaterialApp(
+      title: 'FashionStore',
+      theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff7c3aed)),
-          useMaterial3: true,
-        ),
-        initialRoute: '/catalog',
-        routes: {
-          '/catalog': (_) => CatalogScreen(repository: catalogRepository),
-          '/login': (_) => LoginScreen(repository: authRepository),
-          '/product': (context) {
-            final product = ModalRoute.of(context)!.settings.arguments! as ProductResponse;
-            return ProductDetailScreen(product: product, repository: catalogRepository);
-          },
-        },
-      );
+          useMaterial3: true),
+      home: DashboardScreen(auth: auth, catalog: catalog, app: app));
 }

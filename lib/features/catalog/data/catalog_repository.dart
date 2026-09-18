@@ -23,13 +23,15 @@ class CatalogRepository {
         .toList();
   }
 
-  Future<List<AvailabilityResponse>> availability(String productId, String branchId) async {
+  Future<List<AvailabilityResponse>> availability(
+      int productId, int branchId) async {
     final response = await _dio.get(
       '${ApiConstants.products}/$productId${ApiConstants.availability}',
       queryParameters: {'branch_id': branchId},
     );
     return (response.data as List<dynamic>)
-        .map((item) => AvailabilityResponse.fromJson(item as Map<String, dynamic>))
+        .map((item) =>
+            AvailabilityResponse.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 }

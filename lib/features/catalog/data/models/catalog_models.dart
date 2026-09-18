@@ -1,127 +1,99 @@
+int asInt(dynamic value) => int.tryParse('$value') ?? 0;
+double asDouble(dynamic value) => double.tryParse('$value') ?? 0;
+
 class VariantResponse {
-  final String id;
-  final String productId;
-  final String sizeId;
-  final String colorId;
+  final int id, productId;
+  final int? sizeId, colorId;
   final String? barcode;
-
-  const VariantResponse({
-    required this.id,
-    required this.productId,
-    required this.sizeId,
-    required this.colorId,
-    this.barcode,
-  });
-
-  factory VariantResponse.fromJson(Map<String, dynamic> json) => VariantResponse(
-        id: json['id'] as String,
-        productId: json['product_id'] as String,
-        sizeId: json['size_id'] as String,
-        colorId: json['color_id'] as String,
-        barcode: json['barcode'] as String?,
-      );
+  const VariantResponse(
+      {required this.id,
+      required this.productId,
+      this.sizeId,
+      this.colorId,
+      this.barcode});
+  factory VariantResponse.fromJson(Map<String, dynamic> j) => VariantResponse(
+      id: asInt(j['id']),
+      productId: asInt(j['product_id']),
+      sizeId: j['size_id'] == null ? null : asInt(j['size_id']),
+      colorId: j['color_id'] == null ? null : asInt(j['color_id']),
+      barcode: j['codigo']?.toString() ?? j['barcode']?.toString());
 }
 
 class ProductResponse {
-  final String id;
-  final String categoryId;
-  final String? seasonId;
-  final String? supplierId;
-  final String name;
-  final String sku;
-  final String? description;
-  final String? technicalMetadata;
-  final String? model3dUrl;
+  final int id, categoryId;
+  final int? seasonId;
+  final String name, sku;
+  final String? description, technicalMetadata, model3dUrl;
   final double price;
   final bool isActive;
   final List<VariantResponse> variants;
-
-  const ProductResponse({
-    required this.id,
-    required this.categoryId,
-    this.seasonId,
-    this.supplierId,
-    required this.name,
-    required this.sku,
-    this.description,
-    this.technicalMetadata,
-    this.model3dUrl,
-    required this.price,
-    required this.isActive,
-    required this.variants,
-  });
-
-  factory ProductResponse.fromJson(Map<String, dynamic> json) => ProductResponse(
-        id: json['id'] as String,
-        categoryId: json['category_id'] as String,
-        seasonId: json['season_id'] as String?,
-        supplierId: json['supplier_id'] as String?,
-        name: json['name'] as String,
-        sku: json['sku'] as String,
-        description: json['description'] as String?,
-        technicalMetadata: json['technical_metadata'] as String?,
-        model3dUrl: json['model_3d_url'] as String?,
-        price: double.parse(json['price'].toString()),
-        isActive: json['is_active'] as bool,
-        variants: (json['variants'] as List<dynamic>? ?? [])
-            .map((item) => VariantResponse.fromJson(item as Map<String, dynamic>))
-            .toList(),
-      );
+  const ProductResponse(
+      {required this.id,
+      required this.categoryId,
+      this.seasonId,
+      required this.name,
+      required this.sku,
+      this.description,
+      this.technicalMetadata,
+      this.model3dUrl,
+      required this.price,
+      required this.isActive,
+      required this.variants});
+  factory ProductResponse.fromJson(Map<String, dynamic> j) => ProductResponse(
+      id: asInt(j['id']),
+      categoryId: asInt(j['category_id']),
+      seasonId: j['season_id'] == null ? null : asInt(j['season_id']),
+      name: '${j['name'] ?? ''}',
+      sku: '${j['sku'] ?? j['id'] ?? ''}',
+      description: j['description']?.toString(),
+      technicalMetadata: j['technical_metadata']?.toString(),
+      model3dUrl: j['model_3d_url']?.toString(),
+      price: asDouble(j['price']),
+      isActive: j['is_active'] as bool? ?? true,
+      variants: ((j['variants'] as List?) ?? [])
+          .whereType<Map>()
+          .map((e) => VariantResponse.fromJson(Map<String, dynamic>.from(e)))
+          .toList());
 }
 
 class AvailabilityResponse {
-  final String productId;
-  final String variantId;
-  final String branchId;
-  final int physicalStock;
-  final int reservedStock;
-  final int availableStock;
-
-  const AvailabilityResponse({
-    required this.productId,
-    required this.variantId,
-    required this.branchId,
-    required this.physicalStock,
-    required this.reservedStock,
-    required this.availableStock,
-  });
-
-  factory AvailabilityResponse.fromJson(Map<String, dynamic> json) => AvailabilityResponse(
-        productId: json['product_id'] as String,
-        variantId: json['variant_id'] as String,
-        branchId: json['branch_id'] as String,
-        physicalStock: json['physical_stock'] as int,
-        reservedStock: json['reserved_stock'] as int,
-        availableStock: json['available_stock'] as int,
-      );
+  final int productId,
+      variantId,
+      branchId,
+      physicalStock,
+      reservedStock,
+      availableStock;
+  const AvailabilityResponse(
+      {required this.productId,
+      required this.variantId,
+      required this.branchId,
+      required this.physicalStock,
+      required this.reservedStock,
+      required this.availableStock});
+  factory AvailabilityResponse.fromJson(Map<String, dynamic> j) =>
+      AvailabilityResponse(
+          productId: asInt(j['product_id']),
+          variantId: asInt(j['variant_id']),
+          branchId: asInt(j['branch_id']),
+          physicalStock: asInt(j['physical_stock']),
+          reservedStock: asInt(j['reserved_stock']),
+          availableStock: asInt(j['available_stock']));
 }
 
 class BranchResponse {
-  final String id;
-  final String cityId;
-  final String? managerId;
-  final String name;
-  final String address;
-  final int fittingRooms;
+  final int id, cityId;
+  final String name, address;
   final bool isActive;
-
-  const BranchResponse({
-    required this.id,
-    required this.cityId,
-    this.managerId,
-    required this.name,
-    required this.address,
-    required this.fittingRooms,
-    required this.isActive,
-  });
-
-  factory BranchResponse.fromJson(Map<String, dynamic> json) => BranchResponse(
-        id: json['id'] as String,
-        cityId: json['city_id'] as String,
-        managerId: json['manager_id'] as String?,
-        name: json['name'] as String,
-        address: json['address'] as String,
-        fittingRooms: json['fitting_rooms'] as int,
-        isActive: json['is_active'] as bool,
-      );
+  const BranchResponse(
+      {required this.id,
+      required this.cityId,
+      required this.name,
+      required this.address,
+      required this.isActive});
+  factory BranchResponse.fromJson(Map<String, dynamic> j) => BranchResponse(
+      id: asInt(j['id']),
+      cityId: asInt(j['city_id']),
+      name: '${j['name'] ?? ''}',
+      address: '${j['address'] ?? ''}',
+      isActive: j['is_active'] as bool? ?? true);
 }

@@ -42,7 +42,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
               return Center(child: Text(snapshot.error.toString()));
             }
             final products = snapshot.data ?? [];
-            if (products.isEmpty) return const Center(child: Text('No hay productos disponibles.'));
+            if (products.isEmpty)
+              return const Center(child: Text('No hay productos disponibles.'));
             return GridView.builder(
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -57,7 +58,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 return Card(
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
-                    onTap: () => Navigator.pushNamed(context, '/product', arguments: product),
+                    onTap: () => Navigator.pushNamed(context, '/product',
+                        arguments: product),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
@@ -65,10 +67,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         children: [
                           Expanded(
                             child: product.model3dUrl == null
-                                ? const Center(child: Icon(Icons.checkroom, size: 64))
-                                : const Center(child: Icon(Icons.view_in_ar, size: 64)),
+                                ? const Center(
+                                    child: Icon(Icons.checkroom, size: 64))
+                                : const Center(
+                                    child: Icon(Icons.view_in_ar, size: 64)),
                           ),
-                          Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          Text(product.name,
+                              maxLines: 2, overflow: TextOverflow.ellipsis),
                           const SizedBox(height: 4),
                           Text('\$${product.price.toStringAsFixed(2)}'),
                         ],

@@ -1,6 +1,22 @@
-# fashionstore_mobile
+# FashionStore Mobile
 
-A new Flutter project.
+Flutter client for the FashionStore API. Configure the backend URL at build time:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+
+Products with a `.glb` or `.gltf` URL expose the virtual fitting screen through
+`model_viewer_plus`, which delegates AR launch to ARCore/ARKit where supported.
+Unsupported devices and invalid model URLs show an explicit error. This is a model
+viewer capability boundary, not body tracking or a claim of virtual try-on.
+
+The checkout always uses the backend Stripe flow and displays the backend payment
+status; it never marks a payment as completed locally.
+
+The client also supports `POST /reports/analytical-query/voice` through
+`AppRepository.analyticalQueryVoice`; the backend controls Google Speech credentials
+through environment variables.
 
 ## Getting Started
 
