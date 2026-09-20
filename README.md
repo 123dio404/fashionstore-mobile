@@ -18,6 +18,15 @@ The client also supports `POST /reports/analytical-query/voice` through
 `AppRepository.analyticalQueryVoice`; the backend controls Google Speech credentials
 through environment variables.
 
+## Design system
+
+The app uses the shared design system described in the design repository
+(`fashionstore-design`, local path `../design`): tokens in `lib/core/theme/app_theme.dart`
+(brand colour, semantics, radii, spacing, type scale with **DM Serif Display + Inter**),
+reusable widgets in `lib/shared/widgets` (button, card, text field, badges, empty/error/offline/
+service-unavailable states, skeleton, banner, confirmation dialog) and the brand logo in
+`assets/images/logo.png`. Screens already migrated: login, register, catalog and dashboard.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
