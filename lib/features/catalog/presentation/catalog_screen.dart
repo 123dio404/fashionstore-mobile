@@ -42,8 +42,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
               return Center(child: Text(snapshot.error.toString()));
             }
             final products = snapshot.data ?? [];
-            if (products.isEmpty)
+            if (products.isEmpty) {
               return const Center(child: Text('No hay productos disponibles.'));
+            }
             return GridView.builder(
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

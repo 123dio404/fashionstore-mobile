@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../data/auth_repository.dart';
 import '../data/models/auth_models.dart';
 
@@ -37,29 +39,31 @@ class _RegisterState extends State<RegisterScreen> {
       appBar: AppBar(title: const Text('Crear cuenta')),
       body: Form(
           key: form,
-          child: ListView(padding: const EdgeInsets.all(24), children: [
-            TextFormField(
+          child: ListView(padding: const EdgeInsets.all(AppSpacing.xl), children: [
+            AppTextField(
+                label: 'Nombre completo',
                 controller: name,
-                decoration: const InputDecoration(labelText: 'Nombre completo'),
                 validator: (v) =>
                     v != null && v.length > 1 ? null : 'Ingresa tu nombre'),
-            TextFormField(
+            AppTextField(
+                label: 'Correo',
                 controller: email,
-                decoration: const InputDecoration(labelText: 'Correo'),
+                keyboardType: TextInputType.emailAddress,
                 validator: (v) =>
                     v != null && v.contains('@') ? null : 'Correo inválido'),
-            TextFormField(
+            AppTextField(
+                label: 'Contraseña',
                 controller: pass,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Contraseña'),
                 validator: (v) =>
                     v != null && v.length >= 8 ? null : 'Mínimo 8 caracteres'),
             if (error != null)
-              Text(error!,
-                  style: TextStyle(color: Theme.of(c).colorScheme.error)),
-            const SizedBox(height: 20),
-            FilledButton(
+              AppBanner(message: error!, tone: AppBannerTone.error),
+            const SizedBox(height: AppSpacing.md),
+            AppButton(
+                label: 'Registrarme',
                 onPressed: loading ? null : submit,
-                child: Text(loading ? 'Creando...' : 'Registrarme'))
+                loading: loading,
+                expanded: true)
           ])));
 }

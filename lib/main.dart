@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/network/api_client.dart';
+import 'core/theme/app_theme.dart';
 import 'features/app_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/dashboard_screen.dart';
@@ -26,8 +27,6 @@ class FashionStoreApp extends StatelessWidget {
   @override
   Widget build(BuildContext c) => MaterialApp(
       title: 'FashionStore',
-      theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff7c3aed)),
-          useMaterial3: true),
+      theme: AppTheme.light(),
       home: DashboardScreen(auth: auth, catalog: catalog, app: app));
 }

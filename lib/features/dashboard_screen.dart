@@ -35,8 +35,9 @@ class _DashboardState extends State<DashboardScreen> {
   Widget _catalog() => FutureBuilder<List<ProductResponse>>(
       future: widget.catalog.products(),
       builder: (c, s) {
-        if (s.connectionState == ConnectionState.waiting)
+        if (s.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
         if (s.hasError) return Center(child: Text('${s.error}'));
         final products = s.data ?? [];
         return RefreshIndicator(
@@ -91,10 +92,12 @@ class _DashboardState extends State<DashboardScreen> {
   Widget _cart() => FutureBuilder<Map<String, dynamic>>(
       future: widget.app.cart(),
       builder: (c, s) {
-        if (s.connectionState == ConnectionState.waiting)
+        if (s.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
-        if (s.hasError)
+        }
+        if (s.hasError) {
           return _loginPrompt('Inicia sesión para ver tu carrito');
+        }
         final data = s.data ?? {};
         final items = (data['items'] as List? ?? []).whereType<Map>().toList();
         return ListView(padding: const EdgeInsets.all(16), children: [
@@ -149,9 +152,10 @@ class _DashboardState extends State<DashboardScreen> {
         setState(() {});
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -197,9 +201,10 @@ class _DashboardState extends State<DashboardScreen> {
                     subtitle: Text('${x['sale_date'] ?? x['status'] ?? ''}')))
               ]));
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -220,9 +225,10 @@ class _DashboardState extends State<DashboardScreen> {
                             widget.app.delete('/reservations/${x['id']}'))))
               ]));
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -252,7 +258,9 @@ class _DashboardState extends State<DashboardScreen> {
             (await widget.catalog.branches()).where((b) => b.isActive).toList();
         if (products.isEmpty ||
             branches.isEmpty ||
-            products.first.variants.isEmpty) return;
+            products.first.variants.isEmpty) {
+          return;
+        }
         final availability = await widget.catalog
             .availability(products.first.id, branches.first.id);
         if (availability.isEmpty) return;
@@ -295,19 +303,22 @@ class _DashboardState extends State<DashboardScreen> {
       try {
         final c = await widget.app.create(
             '/chatbot/conversations', {'title': 'Asistente FashionStore'});
-        if (mounted)
+        if (mounted) {
           showDialog(
               context: context,
               builder: (_) => AlertDialog(
                   title: const Text('Chatbot'),
                   content: Text('Conversación #${c['id']} creada.')));
+        }
       } catch (_) {}
     }
   }
 
   @override
   Widget build(BuildContext c) => Scaffold(
-      appBar: AppBar(title: const Text('FashionStore'), actions: [
+      appBar: AppBar(
+          title: Image.asset('assets/images/logo.png', height: 28),
+          actions: [
         if (user == null)
           IconButton(
               onPressed: () => Navigator.push(

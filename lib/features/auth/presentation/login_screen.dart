@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../data/auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -47,34 +49,30 @@ class _LoginScreenState extends State<LoginScreen> {
         body: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             children: [
-              TextFormField(
+              AppTextField(
+                label: 'Correo',
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Correo'),
-                validator: (value) => value != null && value.contains('@')
-                    ? null
-                    : 'Correo inválido',
+                validator: (value) =>
+                    value != null && value.contains('@') ? null : 'Correo inválido',
               ),
-              TextFormField(
+              AppTextField(
+                label: 'Contraseña',
                 controller: _password,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Contraseña'),
-                validator: (value) => value != null && value.length >= 8
-                    ? null
-                    : 'Mínimo 8 caracteres',
+                validator: (value) =>
+                    value != null && value.length >= 8 ? null : 'Mínimo 8 caracteres',
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(_error!,
-                    style:
-                        TextStyle(color: Theme.of(context).colorScheme.error)),
-              ],
-              const SizedBox(height: 24),
-              FilledButton(
+              if (_error != null)
+                AppBanner(message: _error!, tone: AppBannerTone.error),
+              const SizedBox(height: AppSpacing.md),
+              AppButton(
+                label: 'Ingresar',
                 onPressed: _loading ? null : _submit,
-                child: Text(_loading ? 'Conectando...' : 'Ingresar'),
+                loading: _loading,
+                expanded: true,
               ),
             ],
           ),
