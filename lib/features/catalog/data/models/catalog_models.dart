@@ -63,13 +63,16 @@ class AvailabilityResponse {
       physicalStock,
       reservedStock,
       availableStock;
+  /// CU10/CU11: fila de inventario con la que el carrito y el checkout descuentan stock.
+  final int stockId;
   const AvailabilityResponse(
       {required this.productId,
       required this.variantId,
       required this.branchId,
       required this.physicalStock,
       required this.reservedStock,
-      required this.availableStock});
+      required this.availableStock,
+      this.stockId = 0});
   factory AvailabilityResponse.fromJson(Map<String, dynamic> j) =>
       AvailabilityResponse(
           productId: asInt(j['product_id']),
@@ -77,7 +80,8 @@ class AvailabilityResponse {
           branchId: asInt(j['branch_id']),
           physicalStock: asInt(j['physical_stock']),
           reservedStock: asInt(j['reserved_stock']),
-          availableStock: asInt(j['available_stock']));
+          availableStock: asInt(j['available_stock']),
+          stockId: asInt(j['stock_id']));
 }
 
 class BranchResponse {

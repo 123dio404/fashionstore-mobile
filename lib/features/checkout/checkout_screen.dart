@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/data/mock_data.dart';
@@ -9,8 +12,15 @@ import '../../../shared/kit/buttons.dart';
 import '../../../shared/kit/nav.dart';
 import '../../../shared/kit/net_image.dart';
 import '../../../shared/kit/states.dart';
+import '../catalog/data/catalog_repository.dart';
+import '../catalog/data/models/catalog_models.dart';
+import '../commerce/data/commerce_repository.dart';
 
 /// Checkout en 3 pasos: resumen → entrega → pago (con pantalla de proceso).
+///
+/// El cobro es **real**: resuelve la sucursal y el stock en la API, arma el carrito del
+/// backend, cobra con la pasarela simulada y emite la factura del documento fiscal
+/// simulado (que se puede guardar en PDF).
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -19,11 +29,16 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
+  final CommerceRepository _commerce = CommerceRepository();
+  final CatalogRepository _catalog = CatalogRepository();
+
   int _step = 0; // 0 resumen · 1 entrega · 2 pago · 3 procesando
   String _delivery = 'home';
   String _storeId = 'centro';
   String _payMethod = 'card';
   String _cardId = 'visa';
+  bool _paying = false;
+  String _payProgress = '';
 
   static const _titles = ['Resumen', 'Entrega', 'Pago'];
 
@@ -409,8 +424,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  /// CU11 — cobra de verdad: resuelve sucursal y stock, llena el carrito del backend,
+  /// pasa por la pasarela simulada y emite la factura del documento fiscal simulado.
   Future<void> _pay(AppState s, double total) async {
-    final subtotal = s.cartSubtotal;
+    if (_paying) return;
     final shipping = _delivery == 'home' ? 4.99 : 0.0;
     final storeName = _store.name;
     final items = s.cart
@@ -428,24 +445,134 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final method = _payLabel;
     final delivery = _delivery;
 
-    setState(() => _step = 3);
-    await Future<void>.delayed(const Duration(milliseconds: 2500));
-    if (!mounted) return;
+    setState(() {
+      _paying = true;
+      _step = 3;
+      _payProgress = 'Ubicando la sucursal…';
+    });
 
-    s.completePurchase(Purchase(
-      id: 'ORD-${1000 + DateTime.now().millisecondsSinceEpoch % 9000}',
-      date: _fmtDate(DateTime.now()),
-      status: 'procesando',
-      total: total,
-      subtotal: subtotal,
-      shipping: shipping,
-      paymentMethod: method,
-      deliveryMethod: delivery,
-      store: delivery == 'pickup' ? storeName : null,
-      items: items,
-    ));
-    s.openOverlay(OverlayScreen.purchaseSuccess);
-    setState(() => _step = 0);
+    try {
+      final branches = await _catalog.branches();
+      if (branches.isEmpty) {
+        throw Exception('El sistema no tiene sucursales configuradas.');
+      }
+      final wanted = _store.id.toLowerCase();
+      final branch = branches.firstWhere(
+        (candidate) => candidate.name.toLowerCase().contains(wanted),
+        orElse: () => branches.first,
+      );
+
+      _setProgress('Leyendo el catálogo…');
+      final products = await _catalog.products();
+
+      final missing = <String>[];
+      for (final item in s.cart) {
+        _setProgress('Reservando stock: ${item.name}…');
+        final product = _matchProduct(products, item.name);
+        if (product == null) {
+          missing.add('${item.name} (no está en el catálogo)');
+          continue;
+        }
+        final rows = await _catalog.availability(product.id, branch.id);
+        final free = _freeStock(rows, item.qty);
+        if (free == null) {
+          missing.add('${item.name} (sin stock en la sucursal)');
+          continue;
+        }
+        final quantity =
+            item.qty > free.availableStock ? free.availableStock : item.qty;
+        await _commerce.addItem(free.stockId, quantity);
+      }
+
+      _setProgress('Cobrando con la pasarela simulada…');
+      final sale = await _commerce.checkout(branchId: branch.id);
+
+      _setProgress('Emitiendo la factura…');
+      final invoice = await _commerce.invoice(sale.id);
+      final pdfPath = await _saveInvoice(sale.id, await _commerce.invoicePdf(sale.id));
+
+      if (!mounted) return;
+      s.completePurchase(Purchase(
+        id: 'ORD-${sale.id}',
+        date: _fmtDate(DateTime.now()),
+        status: 'procesando',
+        total: invoice.total,
+        subtotal: invoice.subtotal,
+        shipping: shipping,
+        paymentMethod: '${invoice.paymentStatus} · ${sale.reference ?? method}',
+        deliveryMethod: delivery,
+        store: delivery == 'pickup' ? storeName : null,
+        items: items,
+      ));
+      setState(() {
+        _step = 0;
+        _paying = false;
+        _payProgress = '';
+      });
+      s.setToast(
+        '${invoice.invoiceNumber} · \$${invoice.total.toStringAsFixed(2)}'
+        '${pdfPath != null ? ' · PDF guardado' : ''}',
+      );
+      if (missing.isNotEmpty) {
+        s.setToast('Fuera de la venta: ${missing.join(', ')}');
+      }
+      s.openOverlay(OverlayScreen.purchaseSuccess);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _step = 2;
+        _paying = false;
+        _payProgress = '';
+      });
+      s.setToast(_describe(error));
+    }
+  }
+
+  void _setProgress(String message) {
+    if (mounted) setState(() => _payProgress = message);
+  }
+
+  /// Producto del catálogo del backend con el mismo nombre que la prenda del carrito.
+  ProductResponse? _matchProduct(List<ProductResponse> products, String name) {
+    final wanted = name.trim().toLowerCase();
+    for (final product in products) {
+      if (product.name.trim().toLowerCase() == wanted) return product;
+    }
+    return null;
+  }
+
+  /// Fila de inventario con stock suficiente (o al menos con algo disponible).
+  AvailabilityResponse? _freeStock(List<AvailabilityResponse> rows, int quantity) {
+    for (final row in rows) {
+      if (row.availableStock >= quantity) return row;
+    }
+    for (final row in rows) {
+      if (row.availableStock > 0) return row;
+    }
+    return null;
+  }
+
+  /// Guarda la factura PDF en el almacenamiento temporal de la app.
+  Future<String?> _saveInvoice(int saleId, List<int> bytes) async {
+    if (bytes.isEmpty) return null;
+    try {
+      final file =
+          File('${Directory.systemTemp.path}/fashionstore-factura-$saleId.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      return file.path;
+    } on Object {
+      return null;
+    }
+  }
+
+  String _describe(Object error) {
+    if (error is DioException) {
+      if (error.response?.statusCode == 401) {
+        return 'Inicia sesión como cliente para completar la compra.';
+      }
+      return error.message ?? 'No se pudo completar la compra.';
+    }
+    return error.toString().replaceFirst('Exception: ', '');
   }
 
   static const _months = [
@@ -473,7 +600,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: AppTextStyles.displaySize(22)),
             const SizedBox(height: 6),
             Text(
-              'Conectando con la pasarela… por favor espera.',
+              _payProgress.isEmpty
+                  ? 'Conectando con la pasarela… por favor espera.'
+                  : _payProgress,
+              textAlign: TextAlign.center,
               style: AppTextStyles.bodySize(13, color: AppColors.muted),
             ),
           ],

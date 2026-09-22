@@ -9,6 +9,8 @@ import 'package:fashionstore_mobile/core/models/fashion_models.dart';
 import 'package:fashionstore_mobile/core/services/ar_service.dart';
 import 'package:fashionstore_mobile/core/state/app_state.dart';
 import 'package:fashionstore_mobile/core/theme/app_theme.dart';
+import 'package:fashionstore_mobile/features/catalog/data/models/catalog_models.dart';
+import 'package:fashionstore_mobile/features/commerce/data/models/commerce_models.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -191,5 +193,79 @@ void main() {
     expect(
         ArService.isSupportedModel('https://cdn.test/prenda.gltf?v=2'), isTrue);
     expect(ArService.isSupportedModel('https://cdn.test/prenda.jpg'), isFalse);
+  });
+
+  // ------------------------------------------------------------- CU10/CU11 --
+
+  test('CU11: el carrito, la venta y la factura se parsean de la API', () {
+    // Payloads reales de la API (PostgreSQL devuelve los NUMERIC como texto).
+    final item = ApiCartItem.fromJson(const {
+      'id': 3,
+      'stock_id': 74,
+      'quantity': 2,
+      'price': '112.00',
+      'variant_id': 20,
+      'product_id': 6,
+      'product_name': 'Blazer Estructurado',
+      'size': 'S',
+      'color': 'Negro',
+    });
+    expect(item.stockId, 74);
+    expect(item.quantity, 2);
+    expect(item.price, 112);
+    expect(item.productName, 'Blazer Estructurado');
+    expect(item.size, 'S');
+
+    final sale = ApiSale.fromJson(const {
+      'id': 2,
+      'client_id': 5,
+      'branch_id': 6,
+      'total': '224.00',
+      'sale_type': 'digital',
+      'payments': [
+        {'id': 2, 'status': 'completado', 'amount': '224.00', 'reference': 'SIM-e2e-demo-1'},
+      ],
+    });
+    expect(sale.id, 2);
+    expect(sale.total, 224);
+    expect(sale.reference, 'SIM-e2e-demo-1');
+
+    final invoice = ApiInvoice.fromJson(const {
+      'provider': 'simulated',
+      'invoice_number': 'FAC-000000000002',
+      'sale_id': 2,
+      'issued_at': '2026-09-22T02:00:00Z',
+      'issuer_name': 'FashionStore S.A.S.',
+      'issuer_tax_id': null,
+      'customer_id': 5,
+      'tax_rate': '0.19',
+      'subtotal': '188.24',
+      'tax': '35.76',
+      'total': '224.00',
+      'payment_status': 'completado',
+      'payment_reference': 'SIM-e2e-demo-1',
+      'disclaimer': 'Documento simulado con fines académicos: no tiene validez fiscal.',
+    });
+    expect(invoice.invoiceNumber, 'FAC-000000000002');
+    expect(invoice.taxPercent, '19');
+    expect(invoice.subtotal, 188.24);
+    expect(invoice.tax, 35.76);
+    expect(invoice.total, 224);
+    expect(invoice.paymentStatus, 'completado');
+    expect(invoice.disclaimer, contains('no tiene validez fiscal'));
+  });
+
+  test('CU10: la disponibilidad expone el stock_id para descontar inventario', () {
+    final row = AvailabilityResponse.fromJson(const {
+      'product_id': 6,
+      'variant_id': 20,
+      'branch_id': 6,
+      'physical_stock': 6,
+      'reserved_stock': 0,
+      'available_stock': 6,
+      'stock_id': 74,
+    });
+    expect(row.stockId, 74);
+    expect(row.availableStock, 6);
   });
 }
