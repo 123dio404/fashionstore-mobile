@@ -105,11 +105,11 @@ void main() {
 
   // ------------------------------------------------------------------ CU17 --
 
-  Product arProduct({String? modelUrl}) => Product(
+  Product arProduct({String? modelUrl, String category = 'Mujer'}) => Product(
         id: 99,
         name: 'Zapatilla Demo',
         brand: 'Khronos',
-        category: 'Calzado',
+        category: category,
         price: 10,
         oldPrice: 12,
         discount: 10,
@@ -125,12 +125,38 @@ void main() {
     expect(resolved.label, contains('producto'));
   });
 
-  test('CU17: sin model_3d_url cae al modelo de respaldo del prototipo', () async {
+  test('CU17: sin model_3d_url usa el modelo de demostración de la categoría', () async {
     // Sin red (ni backend con modelos) el vestidor debe seguir siendo usable.
-    final resolved = await ArService().resolveModel(arProduct());
-    expect(resolved.url, ArConstants.fallbackModelUrl);
-    expect(resolved.source, ArModelSource.fallback);
-    expect(resolved.url, endsWith('MaterialsVariantsShoe.glb'));
+    final prenda = await ArService().resolveModel(arProduct());
+    expect(prenda.url, ArConstants.clothModelUrl);
+    expect(prenda.source, ArModelSource.category);
+    expect(prenda.url, endsWith('SheenCloth.gltf'));
+    expect(prenda.previewUrl, ArConstants.clothPreviewUrl);
+
+    final calzado =
+        await ArService().resolveModel(arProduct(category: 'Calzado'));
+    expect(calzado.url, ArConstants.shoeModelUrl);
+    expect(calzado.url, endsWith('MaterialsVariantsShoe.glb'));
+    expect(calzado.previewUrl, endsWith('screenshot.jpg'));
+
+    final accesorio =
+        await ArService().resolveModel(arProduct(category: 'Accesorios'));
+    expect(accesorio.url, ArConstants.sunglassesModelUrl);
+    expect(accesorio.previewUrl, endsWith('SunglassesKhronos.png'));
+
+    // Sin categoría queda el respaldo del prototipo (la zapatilla de Khronos).
+    final sinCategoria = await ArService().resolveModel(arProduct(category: ''));
+    expect(sinCategoria.url, ArConstants.fallbackModelUrl);
+    expect(sinCategoria.source, ArModelSource.fallback);
+  });
+
+  test('CU17: el catálogo de demostración cubre prenda, calzado y accesorios', () {
+    expect(ArConstants.modelForCategory('Mujer'), ArConstants.clothModelUrl);
+    expect(ArConstants.modelForCategory('Hombre'), ArConstants.clothModelUrl);
+    expect(ArConstants.modelForCategory('Calzado'), ArConstants.shoeModelUrl);
+    expect(ArConstants.modelForCategory('Accesorios'),
+        ArConstants.sunglassesModelUrl);
+    expect(ArConstants.fallbackModelUrl, ArConstants.shoeModelUrl);
   });
 
   test('CU17: sin canal nativo el soporte AR se reporta como no disponible', () async {

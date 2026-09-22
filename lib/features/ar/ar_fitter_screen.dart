@@ -285,6 +285,7 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
                       key: ValueKey('ar-${_product.id}-${_model!.url}'),
                       src: _model!.url,
                       alt: 'Modelo 3D de ${_product.name}',
+                      poster: _model!.previewUrl,
                       ar: true,
                       arModes: const ['scene-viewer', 'webxr', 'quick-look'],
                       arScale: ArScale.fixed,

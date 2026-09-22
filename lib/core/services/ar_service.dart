@@ -51,7 +51,7 @@ class ArLaunchResult {
 }
 
 /// De dónde salió el `.glb` que se proyecta.
-enum ArModelSource { product, catalog, fallback }
+enum ArModelSource { product, catalog, category, fallback }
 
 /// Modelo 3D resuelto para el vestidor.
 class ArModel {
@@ -64,8 +64,12 @@ class ArModel {
   String get label => switch (source) {
         ArModelSource.product => 'model_3d_url del producto',
         ArModelSource.catalog => 'model_3d_url del catálogo (API)',
+        ArModelSource.category => 'modelo de demostración de la categoría',
         ArModelSource.fallback => 'modelo de respaldo del prototipo',
       };
+
+  /// Póster oficial del modelo (mientras carga el 3D).
+  String get previewUrl => ArConstants.previewFor(url);
 }
 
 /// CU17 — Vestidor Virtual AR.
@@ -157,7 +161,8 @@ class ArService {
   /// Resuelve el `.glb` del vestidor en este orden:
   /// 1. `Product.model3dUrl` — el dato que ya trae la UI.
   /// 2. `model_3d_url` del producto en el catálogo del backend (`GET /products`, público).
-  /// 3. `ArConstants.fallbackModelUrl` — respaldo del prototipo.
+  /// 3. Modelo de demostración de la categoría (prenda, calzado o accesorio).
+  /// 4. `ArConstants.fallbackModelUrl` — respaldo del prototipo.
   Future<ArModel> resolveModel(Product product) async {
     final own = product.model3dUrl?.trim();
     if (own != null && own.isNotEmpty) {
@@ -167,9 +172,17 @@ class ArService {
     if (remote != null) {
       return ArModel(url: remote, source: ArModelSource.catalog, name: product.name);
     }
+    final category = product.category.trim();
+    if (category.isEmpty) {
+      return ArModel(
+        url: ArConstants.fallbackModelUrl,
+        source: ArModelSource.fallback,
+        name: product.name,
+      );
+    }
     return ArModel(
-      url: ArConstants.fallbackModelUrl,
-      source: ArModelSource.fallback,
+      url: ArConstants.modelForCategory(category),
+      source: ArModelSource.category,
       name: product.name,
     );
   }
