@@ -214,10 +214,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.camera_alt_outlined,
+                  const Icon(Icons.view_in_ar_outlined,
                       size: 18, color: AppColors.accent),
                   const SizedBox(width: 8),
-                  Text('Probar en Probador Virtual',
+                  Text('Ver en Vestidor AR',
                       style: AppTextStyles.bodySize(13,
                           color: AppColors.accentDark, weight: FontWeight.w700)),
                 ],

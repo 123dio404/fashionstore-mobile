@@ -51,6 +51,12 @@ class Product {
   final int reviews;
   final bool isNew;
   final bool isFeatured;
+  /// CU17: modelo 3D del producto (`model_3d_url` del backend). Si es nulo o vacío,
+  /// el vestidor usa `ArConstants.fallbackModelUrl`.
+  final String? model3dUrl;
+
+  /// CU17: formato del modelo (`glb` | `gltf`).
+  final String? model3dFormat;
 
   const Product({
     required this.id,
@@ -70,7 +76,12 @@ class Product {
     this.reviews = 0,
     this.isNew = false,
     this.isFeatured = false,
+    this.model3dUrl,
+    this.model3dFormat,
   });
+
+  /// CU17: `true` cuando el producto declara su propio modelo 3D.
+  bool get hasOwnModel3d => model3dUrl != null && model3dUrl!.trim().isNotEmpty;
 }
 
 class CartItem {

@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- CU17 (Vestidor Virtual AR). La cámara la consume ARCore/Scene Viewer, no la app:
+         por eso `required="false"` — el APK se instala también en equipos sin ARCore
+         (ahí el vestidor cae al visor 3D de respaldo) y usa AR real donde sí existe. -->
     <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <application
@@ -29,6 +33,13 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- CU17: `optional` habilita Scene Viewer/ARCore en el Vestidor Virtual sin
+             exigir el hardware, y le permite a ARCore instalarse desde Play Store
+             la primera vez que se abre la sesión AR. -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="optional" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -44,6 +55,14 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- CU17: sin estas entradas Android 11+ oculta los paquetes y la app no puede
+             saber si Scene Viewer/ARCore están disponibles para el Vestidor Virtual. -->
+        <package android:name="com.google.ar.core" />
+        <package android:name="com.google.android.googlequicksearchbox" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
         </intent>
     </queries>
 </manifest>
