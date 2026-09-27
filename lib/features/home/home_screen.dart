@@ -110,9 +110,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              _circleButton(
-                Icons.notifications_none,
-                () => s.setToast('No tienes notificaciones nuevas'),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _circleButton(
+                    Icons.notifications_none,
+                    () => s.openOverlay(OverlayScreen.notifications),
+                  ),
+                  if (s.unreadNotificationsCount > 0)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.accent,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${s.unreadNotificationsCount}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 8),
               Container(

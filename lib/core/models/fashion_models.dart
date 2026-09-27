@@ -16,6 +16,7 @@ enum OverlayScreen {
   checkout,
   purchaseSuccess,
   purchases,
+  notifications,
   arFitter,
   aiRecs,
   chatbot,
@@ -24,6 +25,32 @@ enum OverlayScreen {
   settings,
   support,
   stateDemo,
+}
+
+class NotificationItem {
+  final String id;
+  final String title;
+  final String message;
+  final String date;
+  final int? saleId;
+  final String? transactionRef;
+  final double? amount;
+  final String? invoiceNumber;
+  final String type; // 'purchase_success', 'payment_rejected', 'reservation'
+  bool isRead;
+
+  NotificationItem({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.date,
+    this.saleId,
+    this.transactionRef,
+    this.amount,
+    this.invoiceNumber,
+    this.type = 'purchase_success',
+    this.isRead = false,
+  });
 }
 
 class ProductColor {

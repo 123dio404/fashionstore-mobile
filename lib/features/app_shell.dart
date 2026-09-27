@@ -15,6 +15,7 @@ import 'chatbot/chatbot_screen.dart';
 import 'checkout/checkout_screen.dart';
 import 'checkout/purchase_success_screen.dart';
 import 'home/home_screen.dart';
+import 'notifications/notifications_screen.dart';
 import 'preferences/preferences_screen.dart';
 import 'profile/profile_screen.dart';
 import 'purchases/purchases_screen.dart';
@@ -103,6 +104,7 @@ class _AppShellState extends State<AppShell> {
         OverlayScreen.checkout => const CheckoutScreen(),
         OverlayScreen.purchaseSuccess => const PurchaseSuccessScreen(),
         OverlayScreen.purchases => const PurchasesScreen(),
+        OverlayScreen.notifications => const NotificationsScreen(),
         OverlayScreen.arFitter => ArFitterScreen(
             initialProduct: s.arProduct,
           ),

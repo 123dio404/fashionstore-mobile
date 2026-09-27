@@ -87,6 +87,14 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       code: 'FS-${1000 + stamp % 9000}',
     );
     s.addReservation(r);
+    s.addNotification(NotificationItem(
+      id: 'res-${DateTime.now().millisecondsSinceEpoch}',
+      title: 'Reserva confirmada en tienda',
+      message: 'Tu reserva para "${p.name}" ($_size) en ${st.name} el $_date a las $_time ha sido confirmada. Código de retiro: ${r.code}.',
+      date: 'Hoy',
+      type: 'reservation',
+      transactionRef: r.code,
+    ));
     s.setToast('Reserva ${r.code} confirmada');
     setState(() {
       _created = r;

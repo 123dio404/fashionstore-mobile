@@ -32,21 +32,37 @@ class CommerceRepository {
     );
   }
 
-  /// Cobra el carrito del backend y registra la venta con su pago.
+  /// Cobra el carrito del backend y registra la venta con su pago (Stripe, QR, efectivo).
   Future<ApiSale> checkout({
     required int branchId,
-    String provider = 'simulado',
+    String provider = 'stripe',
+    String? cardToken,
+    bool simulateRejection = false,
   }) async {
     final response = await _dio.post(
       ApiConstants.checkout,
       data: {
         'branch_id': branchId,
         'payment_provider': provider,
-        'payment_status': 'completado',
+        'payment_status': 'pendiente',
+        'card_token': cardToken,
+        'simulate_rejection': simulateRejection,
         'idempotency_key': 'app-${DateTime.now().millisecondsSinceEpoch}',
       },
     );
     return ApiSale.fromJson(Map<String, dynamic>.from(response.data as Map));
+  }
+
+  /// Genera código QR de Stripe para pago.
+  Future<Map<String, dynamic>> createQrPayment({double? amount}) async {
+    final response = await _dio.post(
+      ApiConstants.paymentsQr,
+      data: {
+        if (amount != null) 'amount': amount,
+        'currency': 'usd',
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
   }
 
   /// Documento fiscal simulado de la venta (número, IVA y descargo).

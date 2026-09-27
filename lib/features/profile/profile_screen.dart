@@ -188,6 +188,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             _menuItem(Icons.inventory_2_outlined, 'Mis compras',
                 'Historial de pedidos', () => s.openOverlay(OverlayScreen.purchases)),
+            _menuItem(Icons.notifications_outlined, 'Notificaciones',
+                'Avisos de compra y transacciones', () => s.openOverlay(OverlayScreen.notifications)),
             _menuItem(Icons.tune, 'Preferencias',
                 'Marcas, colores y tallas', () => s.openOverlay(OverlayScreen.preferences)),
             _menuItem(Icons.settings_outlined, 'Configuración',

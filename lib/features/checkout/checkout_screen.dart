@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -17,10 +18,6 @@ import '../catalog/data/models/catalog_models.dart';
 import '../commerce/data/commerce_repository.dart';
 
 /// Checkout en 3 pasos: resumen → entrega → pago (con pantalla de proceso).
-///
-/// El cobro es **real**: resuelve la sucursal y el stock en la API, arma el carrito del
-/// backend, cobra con la pasarela simulada y emite la factura del documento fiscal
-/// simulado (que se puede guardar en PDF).
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -35,8 +32,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   int _step = 0; // 0 resumen · 1 entrega · 2 pago · 3 procesando
   String _delivery = 'home';
   String _storeId = 'centro';
-  String _payMethod = 'card';
-  String _cardId = 'visa';
+  String _payMethod = 'card'; // card · qr · cash
+  String _cardId = 'visa'; // visa · mc
+  String? _qrCodeBase64;
+  String? _qrPaymentUrl;
+  bool _loadingQr = false;
   bool _paying = false;
   String _payProgress = '';
 
@@ -75,7 +75,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               if (_step == 0) ..._summaryStep(s),
               if (_step == 1) ..._deliveryStep(),
-              if (_step == 2) ..._paymentStep(),
+              if (_step == 2) ..._paymentStep(s),
               const SizedBox(height: 16),
               _costsCard(s),
             ],
@@ -253,16 +253,36 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
       ];
 
-  static const _cards = <(String, String, Color)>[
-    ('visa', 'Visa •••• 4242', Color(0xFF1A1F71)),
-    ('mc', 'Mastercard •••• 8821', Color(0xFFEB001B)),
+  static const _cards = <(String, String, Color, String, bool)>[
+    ('visa', 'Visa •••• 4242', Color(0xFF1A1F71), 'pm_card_visa', false),
+    ('mc', 'Mastercard •••• 0002', Color(0xFFEB001B), 'pm_card_declined', true),
   ];
 
   String get _payLabel => switch (_payMethod) {
         'card' => _cards.firstWhere((c) => c.$1 == _cardId).$2,
-        'apple' => 'Apple Pay',
-        _ => 'Google Pay',
+        'qr' => 'Stripe QR',
+        'cash' => 'Efectivo en tienda / entrega',
+        _ => 'Tarjeta Stripe',
       };
+
+  Future<void> _loadQr(double total) async {
+    if (_loadingQr) return;
+    setState(() => _loadingQr = true);
+    try {
+      final res = await _commerce.createQrPayment(amount: total);
+      if (mounted) {
+        setState(() {
+          _qrCodeBase64 = res['qr_code_base64'] as String?;
+          _qrPaymentUrl = res['payment_url'] as String?;
+          _loadingQr = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadingQr = false);
+      }
+    }
+  }
 
   Widget _radioRow(
     bool active,
@@ -270,6 +290,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     IconData icon,
     VoidCallback onTap, {
     Color? swatch,
+    Widget? trailing,
   }) =>
       GestureDetector(
         onTap: onTap,
@@ -282,7 +303,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               color: active ? AppColors.dark : AppColors.borderLight,
               width: 1.5,
             ),
-            color: active ? AppColors.borderLight : AppColors.surface,
+            color: active ? AppColors.borderLight.withValues(alpha: 0.3) : AppColors.surface,
           ),
           child: Row(
             children: [
@@ -306,50 +327,138 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     style:
                         AppTextStyles.bodySize(13, weight: FontWeight.w600)),
               ),
-              if (active)
-                const Icon(Icons.check, size: 16, color: AppColors.success),
+              if (trailing != null) trailing,
+              if (active && trailing == null)
+                const Icon(Icons.check_circle, size: 18, color: AppColors.dark),
             ],
           ),
         ),
       );
 
-  List<Widget> _paymentStep() => [
-        _card('Método de pago', [
-          _radioRow(
-            _payMethod == 'card',
-            'Tarjeta de crédito / débito',
-            Icons.credit_card,
-            () => setState(() => _payMethod = 'card'),
-          ),
-          if (_payMethod == 'card')
-            Padding(
-              padding: const EdgeInsets.only(left: 8, bottom: 8),
-              child: Column(
-                children: _cards
-                    .map((c) => _radioRow(
-                          _cardId == c.$1,
-                          c.$2,
-                          Icons.credit_card,
-                          () => setState(() => _cardId = c.$1),
-                          swatch: c.$3,
-                        ))
-                    .toList(),
-              ),
+  List<Widget> _paymentStep(AppState s) {
+    final total = s.cartSubtotal + (_delivery == 'home' ? 4.99 : 0.0);
+    return [
+      _card('Método de pago (Stripe & Efectivo)', [
+        _radioRow(
+          _payMethod == 'card',
+          'Tarjeta de crédito / débito (Stripe)',
+          Icons.credit_card,
+          () => setState(() => _payMethod = 'card'),
+        ),
+        if (_payMethod == 'card')
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 8),
+            child: Column(
+              children: _cards
+                  .map((c) => _radioRow(
+                        _cardId == c.$1,
+                        c.$2,
+                        Icons.credit_card,
+                        () => setState(() => _cardId = c.$1),
+                        swatch: c.$3,
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: c.$5 ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            c.$5 ? 'Simular Rechazo' : 'Aprobación',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: c.$5 ? AppColors.danger : const Color(0xFF2E7D32),
+                            ),
+                          ),
+                        ),
+                      ))
+                  .toList(),
             ),
-          _radioRow(
-            _payMethod == 'apple',
-            'Apple Pay',
-            Icons.apple,
-            () => setState(() => _payMethod = 'apple'),
           ),
-          _radioRow(
-            _payMethod == 'google',
-            'Google Pay',
-            Icons.g_mobiledata,
-            () => setState(() => _payMethod = 'google'),
+        _radioRow(
+          _payMethod == 'qr',
+          'Stripe QR (Escaneo dinámico)',
+          Icons.qr_code_2,
+          () {
+            setState(() => _payMethod = 'qr');
+            _loadQr(total);
+          },
+        ),
+        if (_payMethod == 'qr')
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.borderLight),
+            ),
+            child: Column(
+              children: [
+                if (_loadingQr) ...[
+                  const SizedBox(height: 12),
+                  const CircularProgressIndicator(strokeWidth: 2, color: AppColors.dark),
+                  const SizedBox(height: 12),
+                  Text('Generando QR seguro con Stripe…',
+                      style: AppTextStyles.bodySize(12, color: AppColors.muted)),
+                ] else if (_qrCodeBase64 != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      base64Decode(
+                        _qrCodeBase64!.contains(',')
+                            ? _qrCodeBase64!.split(',').last
+                            : _qrCodeBase64!,
+                      ),
+                      width: 170,
+                      height: 170,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Escanea para pagar \$${total.toStringAsFixed(2)} con Stripe',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySize(12, weight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Validación en tiempo real por pasarela Stripe.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySize(11, color: AppColors.muted),
+                  ),
+                  if (_qrPaymentUrl != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _qrPaymentUrl!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodySize(10, color: AppColors.muted),
+                    ),
+                  ],
+                ] else ...[
+                  Text('No se pudo generar el QR dinámico.',
+                      style: AppTextStyles.bodySize(12, color: AppColors.danger)),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => _loadQr(total),
+                    child: const Text('Reintentar QR'),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ]),
-      ];
+        _radioRow(
+          _payMethod == 'cash',
+          'Efectivo (Pago en tienda o contra entrega)',
+          Icons.payments_outlined,
+          () => setState(() => _payMethod = 'cash'),
+        ),
+      ]),
+    ];
+  }
 
   Widget _costsCard(AppState s) {
     final subtotal = s.cartSubtotal;
@@ -424,8 +533,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  /// CU11 — cobra de verdad: resuelve sucursal y stock, llena el carrito del backend,
-  /// pasa por la pasarela simulada y emite la factura del documento fiscal simulado.
+  /// CU11 — cobra con pasarela Stripe (validación o rechazo), QR o efectivo,
+  /// y emite la factura del documento fiscal simulado.
   Future<void> _pay(AppState s, double total) async {
     if (_paying) return;
     final shipping = _delivery == 'home' ? 4.99 : 0.0;
@@ -484,18 +593,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         await _commerce.addItem(free.stockId, quantity);
       }
 
-      _setProgress('Cobrando con la pasarela simulada…');
-      final sale = await _commerce.checkout(branchId: branch.id);
+      _setProgress('Procesando pago con la pasarela Stripe…');
+      final selectedCard = _cards.firstWhere((c) => c.$1 == _cardId, orElse: () => _cards.first);
+      final isCard = _payMethod == 'card';
+      final isQr = _payMethod == 'qr';
+      final isCash = _payMethod == 'cash';
 
-      _setProgress('Emitiendo la factura…');
+      final provider = isCash ? 'efectivo' : (isQr ? 'stripe_qr' : 'stripe');
+      final cardToken = isCard ? selectedCard.$4 : null;
+      final simulateRejection = isCard && selectedCard.$5;
+
+      final sale = await _commerce.checkout(
+        branchId: branch.id,
+        provider: provider,
+        cardToken: cardToken,
+        simulateRejection: simulateRejection,
+      );
+
+      _setProgress('Emitiendo factura fiscal simulada…');
       final invoice = await _commerce.invoice(sale.id);
       final pdfPath = await _saveInvoice(sale.id, await _commerce.invoicePdf(sale.id));
 
       if (!mounted) return;
-      s.completePurchase(Purchase(
+      final purchase = Purchase(
         id: 'ORD-${sale.id}',
         date: _fmtDate(DateTime.now()),
-        status: 'procesando',
+        status: 'completado',
         total: invoice.total,
         subtotal: invoice.subtotal,
         shipping: shipping,
@@ -503,7 +626,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         deliveryMethod: delivery,
         store: delivery == 'pickup' ? storeName : null,
         items: items,
+      );
+      s.completePurchase(purchase);
+
+      // Despacha notificación de compra exitosa a la app
+      s.addNotification(NotificationItem(
+        id: 'succ-${DateTime.now().millisecondsSinceEpoch}',
+        title: '¡Compra confirmada! Factura ${invoice.invoiceNumber}',
+        message: 'Tu pago de \$${invoice.total.toStringAsFixed(2)} mediante $method fue validado exitosamente. Ref: ${sale.reference ?? "ORD-${sale.id}"}.',
+        date: _fmtDate(DateTime.now()),
+        type: 'purchase_success',
+        saleId: sale.id,
+        amount: invoice.total,
+        transactionRef: sale.reference ?? 'ORD-${sale.id}',
+        invoiceNumber: invoice.invoiceNumber,
       ));
+
       setState(() {
         _step = 0;
         _paying = false;
@@ -524,7 +662,61 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _paying = false;
         _payProgress = '';
       });
-      s.setToast(_describe(error));
+
+      String errorMsg = _describe(error);
+      bool isDeclined = false;
+
+      if (error is DioException) {
+        if (error.response?.statusCode == 402) {
+          isDeclined = true;
+          final d = error.response?.data;
+          if (d is Map && d['detail'] != null) {
+            errorMsg = d['detail'].toString();
+          }
+        }
+      }
+
+      if (isDeclined ||
+          errorMsg.toLowerCase().contains('rechazad') ||
+          errorMsg.toLowerCase().contains('declined')) {
+        // Despacha notificación de pago rechazado a la app
+        s.addNotification(NotificationItem(
+          id: 'rej-${DateTime.now().millisecondsSinceEpoch}',
+          title: 'Pago rechazado por Stripe',
+          message: errorMsg,
+          date: _fmtDate(DateTime.now()),
+          type: 'payment_rejected',
+          amount: total,
+          transactionRef: 'STRIPE-DECLINED',
+        ));
+
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.error_outline, color: AppColors.danger, size: 24),
+                SizedBox(width: 8),
+                Text('Pago Rechazado', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ],
+            ),
+            content: Text(
+              '$errorMsg\n\nTu carrito y reservas de inventario se mantienen intactos. Puedes seleccionar otra tarjeta o método de pago para reintentar.',
+              style: AppTextStyles.bodySize(13),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Reintentar pago', style: TextStyle(color: AppColors.dark, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      } else {
+        s.setToast(errorMsg);
+      }
     }
   }
 

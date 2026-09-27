@@ -15,6 +15,16 @@ class AppState extends ChangeNotifier {
   final List<int> _favs = [];
   List<Reservation> _reservations = List.of(kInitialReservations);
   final List<Purchase> _purchases = List.of(kInitialPurchases);
+  final List<NotificationItem> _notifications = [
+    NotificationItem(
+      id: 'NOTIF-INIT-1',
+      title: '¡Bienvenido a FashionStore!',
+      message: 'Explora nuestra nueva colección y prueba tus prendas favoritas con el Vestidor Virtual AR.',
+      date: 'Hoy',
+      type: 'info',
+      isRead: false,
+    ),
+  ];
   UserPreferences _prefs = kDefaultPrefs;
   Purchase? _lastPurchase;
   Product? _arProduct;
@@ -32,6 +42,8 @@ class AppState extends ChangeNotifier {
   List<int> get favs => List.unmodifiable(_favs);
   List<Reservation> get reservations => List.unmodifiable(_reservations);
   List<Purchase> get purchases => List.unmodifiable(_purchases);
+  List<NotificationItem> get notifications => List.unmodifiable(_notifications);
+  int get unreadNotificationsCount => _notifications.where((n) => !n.isRead).length;
   UserPreferences get prefs => _prefs;
   Purchase? get lastPurchase => _lastPurchase;
   Product? get arProduct => _arProduct;
@@ -42,6 +54,23 @@ class AppState extends ChangeNotifier {
   int get reservCount =>
       _reservations.where((r) => r.status == 'confirmada').length;
   int get favCount => _favs.length;
+
+  void addNotification(NotificationItem item) {
+    _notifications.insert(0, item);
+    notifyListeners();
+  }
+
+  void markNotificationsAsRead() {
+    for (final n in _notifications) {
+      n.isRead = true;
+    }
+    notifyListeners();
+  }
+
+  void clearNotifications() {
+    _notifications.clear();
+    notifyListeners();
+  }
 
   void goTo(AppPhase p) {
     phase = p;

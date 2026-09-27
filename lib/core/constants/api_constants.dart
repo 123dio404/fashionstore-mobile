@@ -20,6 +20,7 @@ class ApiConstants {
   static const checkout = '/commerce/cart/checkout';
   static const sales = '/commerce/sales';
   static const reservations = '/commerce/reservations';
+  static const paymentsQr = '/commerce/payments/qr';
   static const fittingSessions = '/virtual-fitting/sessions';
   static const preferences = '/recommendations/preferences';
   static const recommendations = '/recommendations';
