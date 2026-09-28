@@ -7,38 +7,51 @@
 class ArConstants {
   ArConstants._();
 
-
-  /// Ruta base en Vercel
-  static const _vercel = 'https://fashionstore-web-eight.vercel.app';
+  /// Ruta base de los modelos publicados por Khronos (`main`).
+  static const _assets =
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
 
   /// Calzado — `MaterialsVariantsShoe`, `.glb` autocontenido con variantes de material.
-  static const shoeModelUrl = '$_vercel/models/MaterialsVariantsShoe.glb';
+  static const shoeModelUrl =
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/'
+      'master/2.0/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb';
 
   /// Accesorios — `SunglassesKhronos`, `.glb` autocontenido (371 KB).
-  static const sunglassesModelUrl = '$_vercel/models/SunglassesKhronos.glb';
+  static const sunglassesModelUrl =
+      '$_assets/SunglassesKhronos/glTF-Binary/SunglassesKhronos.glb';
 
   /// Accesorios / Joyería — `ChronographWatch`, `.glb` de alta definición PBR.
-  static const watchModelUrl = '$_vercel/models/ChronographWatch.glb';
+  static const watchModelUrl =
+      '$_assets/ChronographWatch/glTF-Binary/ChronographWatch.glb';
 
-  /// Textil / Pañuelo — `SheenCloth`, `.glb` simulación de tela técnica Sheen PBR.
-  static const clothModelUrl = '$_vercel/models/SheenCloth.glb';
+  /// Accesorios / Gorras — `cap.glb` alojado en Vercel.
+  static const capModelUrl =
+      'https://fashionstore-web-eight.vercel.app/models/cap.glb';
 
-  /// Calzado Femenino — `SheenHighHeel`, `.glb` zapatos de tacón alta costura.
-  static const heelModelUrl = '$_vercel/models/SheenHighHeel.glb';
+  /// Accesorios / Joyería — `necklace.glb` alojado en Vercel.
+  static const necklaceModelUrl =
+      'https://fashionstore-web-eight.vercel.app/models/necklace.glb';
 
-  /// Joyería — `ClearcoatRing`, `.glb` anillo solitario titanio y carbono.
-  static const ringModelUrl = '$_vercel/models/ClearcoatRing.glb';
+  /// Accesorios / Sombreros — `hat.glb` alojado en Vercel.
+  static const hatModelUrl =
+      'https://fashionstore-web-eight.vercel.app/models/hat.glb';
 
   /// Respaldo por defecto para calzado.
   static const fallbackModelUrl = shoeModelUrl;
 
-  /// Vistas oficiales de cada modelo (coinciden exactamente con el 3D).
-  static const shoePreviewUrl = '$_vercel/previews/shoe.jpg';
-  static const sunglassesPreviewUrl = '$_vercel/previews/sunglasses.png';
-  static const watchPreviewUrl = '$_vercel/previews/watch.jpg';
-  static const clothPreviewUrl = '$_vercel/previews/cloth.jpg';
-  static const heelPreviewUrl = '$_vercel/previews/heel.jpg';
-  static const ringPreviewUrl = '$_vercel/previews/ring.jpg';
+  /// Vistas oficiales de cada modelo (póster del visor mientras carga el 3D).
+  static const shoePreviewUrl =
+      '$_assets/MaterialsVariantsShoe/screenshot/screenshot.jpg';
+  static const sunglassesPreviewUrl =
+      '$_assets/SunglassesKhronos/screenshot/SunglassesKhronos.png';
+  static const watchPreviewUrl =
+      '$_assets/ChronographWatch/screenshot/screenshot.jpg';
+  static const capPreviewUrl =
+      'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400&h=520&fit=crop&auto=format';
+  static const necklacePreviewUrl =
+      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=520&fit=crop&auto=format';
+  static const hatPreviewUrl =
+      'https://images.unsplash.com/photo-1514327605112-b887c0e61c0a?w=400&h=520&fit=crop&auto=format';
 
   /// Canal nativo implementado en `MainActivity.kt`.
   static const channel = 'com.fashionstore/ar';
@@ -54,12 +67,11 @@ class ArConstants {
   /// Vista previa (póster) que corresponde a un modelo.
   static String previewFor(String modelUrl) {
     final value = modelUrl.toLowerCase();
-    if (value.contains('sunglass')) return sunglassesPreviewUrl;
+    if (value.contains('sunglasses')) return sunglassesPreviewUrl;
     if (value.contains('watch')) return watchPreviewUrl;
-    if (value.contains('cloth')) return clothPreviewUrl;
-    if (value.contains('heel')) return heelPreviewUrl;
-    if (value.contains('ring')) return ringPreviewUrl;
-    if (value.contains('shoe')) return shoePreviewUrl;
+    if (value.contains('cap')) return capPreviewUrl;
+    if (value.contains('necklace')) return necklacePreviewUrl;
+    if (value.contains('hat')) return hatPreviewUrl;
     return shoePreviewUrl;
   }
 }
