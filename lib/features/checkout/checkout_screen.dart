@@ -610,7 +610,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         simulateRejection: simulateRejection,
       );
 
-      _setProgress('Emitiendo factura fiscal simulada…');
+      _setProgress('Emitiendo factura oficial electrónica…');
       final invoice = await _commerce.invoice(sale.id);
       final pdfPath = await _saveInvoice(sale.id, await _commerce.invoicePdf(sale.id));
 
