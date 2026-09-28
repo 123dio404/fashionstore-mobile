@@ -162,6 +162,8 @@ const List<Product> kProducts = [
     rating: 4.4,
     reviews: 156,
     isNew: true,
+    model3dUrl: ArConstants.jacketModelUrl,
+    model3dFormat: 'glb',
   ),
   Product(
     id: 7,
@@ -243,24 +245,24 @@ const List<Product> kProducts = [
   ),
   Product(
     id: 10,
-    name: 'Reloj Cronógrafo Imperial',
-    brand: 'Kronos Luxe',
+    name: 'Apple Watch Sport 44mm',
+    brand: 'Apple',
     category: 'Accesorios',
     price: 139.99,
     oldPrice: 199.99,
     discount: 30,
     image:
-        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=520&fit=crop&auto=format',
+        'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=400&h=520&fit=crop&auto=format',
     images: [
-      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=520&fit=crop&auto=format',
+      'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=400&h=520&fit=crop&auto=format',
     ],
     colors: [
-      ProductColor('Plata', '#E5E7EB'),
+      ProductColor('Space Grey', '#374151'),
       ProductColor('Negro', '#111827'),
     ],
-    sizes: ['42mm'],
+    sizes: ['44mm'],
     description:
-        'Reloj analógico cronógrafo de precisión con correa de piel genuina y caja de acero inoxidable cepillado. Inspección 3D en 360° y escala 1:1 en AR.',
+        'Smartwatch deportivo con caja de aluminio Space Grey y correa deportiva negra. Inspección 3D en 360° y escala 1:1 en AR.',
     stock: {'Centro': 4, 'Norte': 3, 'Sur': 7},
     rating: 4.8,
     reviews: 89,
@@ -270,7 +272,7 @@ const List<Product> kProducts = [
   ),
   Product(
     id: 11,
-    name: 'Gorra Urbana Snapback',
+    name: 'Gorra Urbana Baseball',
     brand: 'Nike',
     category: 'Accesorios',
     price: 34.99,
@@ -283,11 +285,11 @@ const List<Product> kProducts = [
     ],
     colors: [
       ProductColor('Negro', '#111827'),
-      ProductColor('Rojo', '#DC2626'),
+      ProductColor('Azul', '#1E3A5F'),
     ],
     sizes: ['Ajustable'],
     description:
-        'Gorra de visera plana y diseño streetwear con broche ajustable posterior. Modelo 3D interactivo para probador virtual y visualización en tu espacio.',
+        'Gorra de béisbol con visera curvada y diseño streetwear confeccionada en algodón premium. Modelo 3D disponible para probar en tu espacio.',
     stock: {'Centro': 10, 'Norte': 8, 'Sur': 15},
     rating: 4.8,
     reviews: 112,
@@ -297,7 +299,7 @@ const List<Product> kProducts = [
   ),
   Product(
     id: 12,
-    name: 'Collar Colgante Black Panther',
+    name: 'Collar Minimalista Eslabones',
     brand: 'Atelier Privé',
     category: 'Accesorios',
     price: 59.99,
@@ -314,13 +316,11 @@ const List<Product> kProducts = [
     ],
     sizes: ['50cm'],
     description:
-        'Collar con cadena de eslabones pulidos y dije emblemático de alta definición. Visualización 3D en 360° y prueba virtual en el cuello.',
+        'Collar con cadena de eslabones pulidos y acabado brillante en acero inoxidable de grado quirúrgico.',
     stock: {'Centro': 6, 'Norte': 4, 'Sur': 9},
     rating: 4.9,
     reviews: 88,
     isFeatured: true,
-    model3dUrl: ArConstants.necklaceModelUrl,
-    model3dFormat: 'glb',
   ),
   Product(
     id: 13,
@@ -341,7 +341,7 @@ const List<Product> kProducts = [
     ],
     sizes: ['M', 'L'],
     description:
-        'Sombrero clásico estilo fedora en fieltro fino con cinta de contraste. Modelo 3D disponible para probar en la cabeza en tiempo real.',
+        'Sombrero clásico estilo fedora en fieltro fino con cinta de contraste. Modelo 3D disponible para probar en tiempo real.',
     stock: {'Centro': 5, 'Norte': 3, 'Sur': 4},
     rating: 4.7,
     reviews: 54,

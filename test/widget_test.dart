@@ -122,43 +122,28 @@ void main() {
   test('CU17: el vestidor usa el model_3d_url del producto cuando existe', () async {
     const url = 'https://cdn.fashionstore.test/models/zapatilla.glb';
     final resolved = await ArService().resolveModel(arProduct(modelUrl: url));
-    expect(resolved.url, url);
+    expect(resolved, isNotNull);
+    expect(resolved!.url, url);
     expect(resolved.source, ArModelSource.product);
     expect(resolved.label, contains('producto'));
   });
 
-  test('CU17: sin model_3d_url usa el modelo de demostración de la categoría', () async {
-    // Sin red (ni backend con modelos) el vestidor debe seguir siendo usable.
-    final prenda = await ArService().resolveModel(arProduct());
-    expect(prenda.url, ArConstants.clothModelUrl);
-    expect(prenda.source, ArModelSource.category);
-    expect(prenda.url, endsWith('SheenCloth.gltf'));
-    expect(prenda.previewUrl, ArConstants.clothPreviewUrl);
-
+  test('CU17: sin model_3d_url resuelve modelos según categoría o null', () async {
     final calzado =
         await ArService().resolveModel(arProduct(category: 'Calzado'));
-    expect(calzado.url, ArConstants.shoeModelUrl);
+    expect(calzado, isNotNull);
+    expect(calzado!.url, ArConstants.shoeModelUrl);
     expect(calzado.url, endsWith('MaterialsVariantsShoe.glb'));
     expect(calzado.previewUrl, endsWith('screenshot.jpg'));
 
     final accesorio =
         await ArService().resolveModel(arProduct(category: 'Accesorios'));
-    expect(accesorio.url, ArConstants.sunglassesModelUrl);
+    expect(accesorio, isNotNull);
+    expect(accesorio!.url, ArConstants.sunglassesModelUrl);
     expect(accesorio.previewUrl, endsWith('SunglassesKhronos.png'));
 
-    // Sin categoría queda el respaldo del prototipo (la zapatilla de Khronos).
-    final sinCategoria = await ArService().resolveModel(arProduct(category: ''));
-    expect(sinCategoria.url, ArConstants.fallbackModelUrl);
-    expect(sinCategoria.source, ArModelSource.fallback);
-  });
-
-  test('CU17: el catálogo de demostración cubre prenda, calzado y accesorios', () {
-    expect(ArConstants.modelForCategory('Mujer'), ArConstants.clothModelUrl);
-    expect(ArConstants.modelForCategory('Hombre'), ArConstants.clothModelUrl);
-    expect(ArConstants.modelForCategory('Calzado'), ArConstants.shoeModelUrl);
-    expect(ArConstants.modelForCategory('Accesorios'),
-        ArConstants.sunglassesModelUrl);
-    expect(ArConstants.fallbackModelUrl, ArConstants.shoeModelUrl);
+    final sinModelo = await ArService().resolveModel(arProduct(category: 'Mujer'));
+    expect(sinModelo, isNull);
   });
 
   test('CU17: sin canal nativo el soporte AR se reporta como no disponible', () async {
