@@ -24,9 +24,17 @@ class ArConstants {
   static const watchModelUrl =
       '$_assets/ChronographWatch/glTF-Binary/ChronographWatch.glb';
 
-  /// Alta costura femenina — `Corset`, `.glb` prenda real con costuras.
-  static const corsetModelUrl =
-      '$_assets/Corset/glTF-Binary/Corset.glb';
+  /// Accesorios / Gorras — `cap.glb` alojado en Vercel.
+  static const capModelUrl =
+      'https://fashionstore-web-eight.vercel.app/models/cap.glb';
+
+  /// Accesorios / Joyería — `necklace.glb` alojado en Vercel.
+  static const necklaceModelUrl =
+      'https://fashionstore-web-eight.vercel.app/models/necklace.glb';
+
+  /// Accesorios / Sombreros — `hat.glb` alojado en Vercel.
+  static const hatModelUrl =
+      'https://fashionstore-web-eight.vercel.app/models/hat.glb';
 
   /// Respaldo por defecto para calzado.
   static const fallbackModelUrl = shoeModelUrl;
@@ -38,8 +46,12 @@ class ArConstants {
       '$_assets/SunglassesKhronos/screenshot/SunglassesKhronos.png';
   static const watchPreviewUrl =
       '$_assets/ChronographWatch/screenshot/screenshot.jpg';
-  static const corsetPreviewUrl =
-      '$_assets/Corset/screenshot/screenshot.jpg';
+  static const capPreviewUrl =
+      'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400&h=520&fit=crop&auto=format';
+  static const necklacePreviewUrl =
+      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=520&fit=crop&auto=format';
+  static const hatPreviewUrl =
+      'https://images.unsplash.com/photo-1514327605112-b887c0e61c0a?w=400&h=520&fit=crop&auto=format';
 
   /// Canal nativo implementado en `MainActivity.kt`.
   static const channel = 'com.fashionstore/ar';
@@ -57,7 +69,9 @@ class ArConstants {
     final value = modelUrl.toLowerCase();
     if (value.contains('sunglasses')) return sunglassesPreviewUrl;
     if (value.contains('watch')) return watchPreviewUrl;
-    if (value.contains('corset')) return corsetPreviewUrl;
+    if (value.contains('cap')) return capPreviewUrl;
+    if (value.contains('necklace')) return necklacePreviewUrl;
+    if (value.contains('hat')) return hatPreviewUrl;
     return shoePreviewUrl;
   }
 }

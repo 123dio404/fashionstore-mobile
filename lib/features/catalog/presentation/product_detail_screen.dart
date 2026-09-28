@@ -202,8 +202,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           _label('DISPONIBILIDAD EN TIENDAS'),
           const SizedBox(height: 10),
           ...p.stock.entries.map((e) => _stockRow(e.key, e.value)),
-          if (p.hasOwnModel3d) ...[
-            const SizedBox(height: 20),
+          const SizedBox(height: 20),
+          if (p.hasOwnModel3d)
             GestureDetector(
               onTap: () => s.openOverlay(OverlayScreen.arFitter, product: p),
               child: Container(
@@ -224,8 +224,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ],
                 ),
               ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.view_in_ar_outlined,
+                      size: 18, color: AppColors.muted),
+                  const SizedBox(width: 8),
+                  Text('Modelo 3D no disponible · Próximamente',
+                      style: AppTextStyles.bodySize(12,
+                          color: AppColors.muted, weight: FontWeight.w600)),
+                ],
+              ),
             ),
-          ],
         ],
       );
 
