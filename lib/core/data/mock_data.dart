@@ -1,3 +1,4 @@
+import '../constants/ar_constants.dart';
 import '../models/fashion_models.dart';
 
 /// Datos demo del prototipo Figma Make (design/figma-make/src/data.ts).
@@ -134,6 +135,8 @@ const List<Product> kProducts = [
     rating: 4.6,
     reviews: 349,
     isFeatured: true,
+    model3dUrl: ArConstants.shoeModelUrl,
+    model3dFormat: 'glb',
   ),
   Product(
     id: 6,
@@ -208,6 +211,89 @@ const List<Product> kProducts = [
     stock: {'Centro': 9, 'Norte': 4, 'Sur': 3},
     rating: 4.5,
     reviews: 278,
+    model3dUrl: ArConstants.shoeModelUrl,
+    model3dFormat: 'glb',
+  ),
+  Product(
+    id: 9,
+    name: 'Gafas Aviator Black Edition',
+    brand: 'Ray-Studio',
+    category: 'Accesorios',
+    price: 49.99,
+    oldPrice: 75.00,
+    discount: 33,
+    image:
+        'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&h=520&fit=crop&auto=format',
+    images: [
+      'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&h=520&fit=crop&auto=format',
+    ],
+    colors: [
+      ProductColor('Negro', '#111827'),
+      ProductColor('Dorado', '#D4AF37'),
+    ],
+    sizes: ['Única'],
+    description:
+        'Gafas de sol polarizadas estilo aviador con montura metálica ultraligera y protección UV400. Pruébatelas en vivo en el espejo frontal o inspecciónalas en tu espacio.',
+    stock: {'Centro': 8, 'Norte': 6, 'Sur': 12},
+    rating: 4.9,
+    reviews: 142,
+    isFeatured: true,
+    model3dUrl: ArConstants.sunglassesModelUrl,
+    model3dFormat: 'glb',
+  ),
+  Product(
+    id: 10,
+    name: 'Reloj Cronógrafo Imperial',
+    brand: 'Kronos Luxe',
+    category: 'Accesorios',
+    price: 139.99,
+    oldPrice: 199.99,
+    discount: 30,
+    image:
+        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=520&fit=crop&auto=format',
+    images: [
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=520&fit=crop&auto=format',
+    ],
+    colors: [
+      ProductColor('Plata', '#E5E7EB'),
+      ProductColor('Negro', '#111827'),
+    ],
+    sizes: ['42mm'],
+    description:
+        'Reloj analógico cronógrafo de precisión con correa de piel genuina y caja de acero inoxidable cepillado. Inspección 3D en 360° y escala 1:1 en AR.',
+    stock: {'Centro': 4, 'Norte': 3, 'Sur': 7},
+    rating: 4.8,
+    reviews: 89,
+    isNew: true,
+    model3dUrl: ArConstants.watchModelUrl,
+    model3dFormat: 'glb',
+  ),
+  Product(
+    id: 11,
+    name: 'Top Corsé Alta Costura',
+    brand: 'Atelier Privé',
+    category: 'Mujer',
+    price: 79.99,
+    oldPrice: 115.00,
+    discount: 30,
+    image:
+        'https://images.unsplash.com/photo-1551803091-e20673f15770?w=400&h=520&fit=crop&auto=format',
+    images: [
+      'https://images.unsplash.com/photo-1551803091-e20673f15770?w=400&h=520&fit=crop&auto=format',
+    ],
+    colors: [
+      ProductColor('Negro', '#111827'),
+      ProductColor('Beige', '#D4C5A9'),
+    ],
+    sizes: ['XS', 'S', 'M', 'L'],
+    description:
+        'Corsé estructurado de diseño contemporáneo con varillas flexibles y acabado satinado de alta costura. Modelo 3D disponible para ajuste al cuerpo en probador virtual.',
+    stock: {'Centro': 5, 'Norte': 2, 'Sur': 6},
+    rating: 4.7,
+    reviews: 64,
+    isNew: true,
+    model3dUrl: ArConstants.corsetModelUrl,
+    model3dFormat: 'glb',
   ),
 ];
 

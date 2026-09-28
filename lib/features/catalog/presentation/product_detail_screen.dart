@@ -202,28 +202,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           _label('DISPONIBILIDAD EN TIENDAS'),
           const SizedBox(height: 10),
           ...p.stock.entries.map((e) => _stockRow(e.key, e.value)),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () => s.openOverlay(OverlayScreen.arFitter, product: p),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: AppColors.accentSoft,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.view_in_ar_outlined,
-                      size: 18, color: AppColors.accent),
-                  const SizedBox(width: 8),
-                  Text('Ver en Vestidor AR',
-                      style: AppTextStyles.bodySize(13,
-                          color: AppColors.accentDark, weight: FontWeight.w700)),
-                ],
+          if (p.hasOwnModel3d) ...[
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () => s.openOverlay(OverlayScreen.arFitter, product: p),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.view_in_ar_outlined,
+                        size: 18, color: AppColors.accent),
+                    const SizedBox(width: 8),
+                    Text('Visualizador 3D y Realidad Aumentada',
+                        style: AppTextStyles.bodySize(13,
+                            color: AppColors.accentDark, weight: FontWeight.w700)),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       );
 

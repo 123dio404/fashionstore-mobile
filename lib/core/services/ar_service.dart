@@ -163,7 +163,7 @@ class ArService {
   /// 2. `model_3d_url` del producto en el catálogo del backend (`GET /products`, público).
   /// 3. Modelo de demostración de la categoría (prenda, calzado o accesorio).
   /// 4. `ArConstants.fallbackModelUrl` — respaldo del prototipo.
-  Future<ArModel> resolveModel(Product product) async {
+  Future<ArModel?> resolveModel(Product product) async {
     final own = product.model3dUrl?.trim();
     if (own != null && own.isNotEmpty) {
       return ArModel(url: own, source: ArModelSource.product, name: product.name);
@@ -172,19 +172,22 @@ class ArService {
     if (remote != null) {
       return ArModel(url: remote, source: ArModelSource.catalog, name: product.name);
     }
-    final category = product.category.trim();
-    if (category.isEmpty) {
+    final cat = product.category.toLowerCase();
+    if (cat.contains('calz') || cat.contains('zapat')) {
       return ArModel(
-        url: ArConstants.fallbackModelUrl,
-        source: ArModelSource.fallback,
+        url: ArConstants.shoeModelUrl,
+        source: ArModelSource.category,
         name: product.name,
       );
     }
-    return ArModel(
-      url: ArConstants.modelForCategory(category),
-      source: ArModelSource.category,
-      name: product.name,
-    );
+    if (cat.contains('acces') || cat.contains('gafa')) {
+      return ArModel(
+        url: ArConstants.sunglassesModelUrl,
+        source: ArModelSource.category,
+        name: product.name,
+      );
+    }
+    return null;
   }
 
   /// Busca en el catálogo del backend un producto homónimo que exponga

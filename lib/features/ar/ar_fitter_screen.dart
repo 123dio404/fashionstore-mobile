@@ -34,8 +34,8 @@ class ArFitterScreen extends StatefulWidget {
 class _ArFitterScreenState extends State<ArFitterScreen> {
   final ArService _ar = ArService();
 
-  /// `permission` (paso 1: cámara) · `viewer` (paso 2: visor 3D + AR).
-  String _step = 'permission';
+  /// `viewer` (paso directo al visor 3D interactivo + opciones AR).
+  String _step = 'viewer';
   bool _loading = true;
   bool _launching = false;
   bool _capturing = false;
@@ -94,7 +94,7 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
     final s = AppScope.of(context);
     return Column(
       children: [
-        AppTopBar(title: 'Vestidor Virtual AR', onBack: s.closeOverlay),
+        AppTopBar(title: 'Probador 3D y Realidad Aumentada', onBack: s.closeOverlay),
         Expanded(child: _step == 'permission' ? _permission(s) : _viewer(s)),
       ],
     );
@@ -211,13 +211,22 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
             const SizedBox(height: 12),
           ],
           DButton(
-            label: 'Ver en mi espacio (AR)',
+            label: 'Ver en mi espacio (AR 1:1)',
             tone: DButtonTone.accent,
             expanded: true,
             size: DButtonSize.lg,
             icon: Icons.view_in_ar,
             loading: _launching,
             onPressed: (_launching || _model == null) ? null : () => _launchAr(s),
+          ),
+          const SizedBox(height: 10),
+          DButton(
+            label: 'Espejo Virtual (Selfie frontal)',
+            tone: DButtonTone.dark,
+            expanded: true,
+            size: DButtonSize.lg,
+            icon: Icons.camera_front_outlined,
+            onPressed: () => _openVirtualMirror(s),
           ),
           const SizedBox(height: 10),
           Row(
@@ -360,41 +369,37 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
               ),
             ],
           ),
-          if (_model != null) ...[
-            const SizedBox(height: 6),
-            Text('Modelo: ${_model!.label}',
-                style: AppTextStyles.bodySize(10, color: AppColors.mutedLight)),
-            Text(_model!.url,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.bodySize(10, color: AppColors.mutedLight)),
-          ],
           if (_picker) ...[
             const SizedBox(height: 12),
             SizedBox(
               height: 74,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: kProducts.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final p = kProducts[i];
-                  return GestureDetector(
-                    onTap: () => _selectProduct(p, s),
-                    child: Container(
-                      width: 60,
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _product.id == p.id
-                              ? AppColors.accent
-                              : AppColors.border,
-                          width: 2,
+              child: Builder(
+                builder: (context) {
+                  final list3d = kProducts.where((p) => p.hasOwnModel3d).toList();
+                  return ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: list3d.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) {
+                      final p = list3d[i];
+                      return GestureDetector(
+                        onTap: () => _selectProduct(p, s),
+                        child: Container(
+                          width: 60,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _product.id == p.id
+                                  ? AppColors.accent
+                                  : AppColors.border,
+                              width: 2,
+                            ),
+                          ),
+                          child: NetImage(url: p.image),
                         ),
-                      ),
-                      child: NetImage(url: p.image),
-                    ),
+                      );
+                    },
                   );
                 },
               ),
@@ -425,6 +430,40 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
       _lastLaunch = result;
     });
     s.setToast(result.message);
+  }
+
+  /// Abre el probador con cámara frontal selfie (Espejo Virtual en vivo).
+  void _openVirtualMirror(AppState s) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.black,
+      builder: (ctx) => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          title: Text(
+            'Espejo Virtual · ${_product.name}',
+            style: const TextStyle(
+                color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+        ),
+        body: WebViewWidget(
+          controller: WebViewController()
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)
+            ..loadRequest(
+              Uri.parse(
+                  'https://fashionstore-web-eight.vercel.app/fitting/${_product.id}'),
+            ),
+        ),
+      ),
+    );
   }
 
   /// Captura la vista 3D actual del visor (`model-viewer.toDataURL`) como PNG.

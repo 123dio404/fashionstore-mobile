@@ -16,24 +16,30 @@ class ArConstants {
       'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/'
       'master/2.0/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb';
 
-  /// Prendas de tela — `SheenCloth` se publica como `.gltf` junto a su `.bin` y sus
-  /// texturas, y el visor las resuelve por ruta relativa.
-  static const clothModelUrl = '$_assets/SheenCloth/glTF/SheenCloth.gltf';
-
   /// Accesorios — `SunglassesKhronos`, `.glb` autocontenido (371 KB).
   static const sunglassesModelUrl =
       '$_assets/SunglassesKhronos/glTF-Binary/SunglassesKhronos.glb';
 
-  /// Respaldo final cuando el producto no trae modelo ni categoría reconocible.
+  /// Accesorios / Joyería — `ChronographWatch`, `.glb` de alta definición PBR.
+  static const watchModelUrl =
+      '$_assets/ChronographWatch/glTF-Binary/ChronographWatch.glb';
+
+  /// Alta costura femenina — `Corset`, `.glb` prenda real con costuras.
+  static const corsetModelUrl =
+      '$_assets/Corset/glTF-Binary/Corset.glb';
+
+  /// Respaldo por defecto para calzado.
   static const fallbackModelUrl = shoeModelUrl;
 
   /// Vistas oficiales de cada modelo (póster del visor mientras carga el 3D).
-  static const clothPreviewUrl =
-      '$_assets/SheenCloth/screenshot/screenshot.jpg';
   static const shoePreviewUrl =
       '$_assets/MaterialsVariantsShoe/screenshot/screenshot.jpg';
   static const sunglassesPreviewUrl =
       '$_assets/SunglassesKhronos/screenshot/SunglassesKhronos.png';
+  static const watchPreviewUrl =
+      '$_assets/ChronographWatch/screenshot/screenshot.jpg';
+  static const corsetPreviewUrl =
+      '$_assets/Corset/screenshot/screenshot.jpg';
 
   /// Canal nativo implementado en `MainActivity.kt`.
   static const channel = 'com.fashionstore/ar';
@@ -46,21 +52,12 @@ class ArConstants {
   /// Formatos que acepta el vestidor (coincide con `model_3d_format` del backend).
   static const supportedFormats = ['glb', 'gltf'];
 
-  /// Modelo de demostración que corresponde a la categoría del producto.
-  static String modelForCategory(String category) {
-    final value = category.toLowerCase();
-    if (value.contains('calz') || value.contains('zapat')) return shoeModelUrl;
-    if (value.contains('acces') || value.contains('gafa')) {
-      return sunglassesModelUrl;
-    }
-    return clothModelUrl;
-  }
-
   /// Vista previa (póster) que corresponde a un modelo.
   static String previewFor(String modelUrl) {
     final value = modelUrl.toLowerCase();
     if (value.contains('sunglasses')) return sunglassesPreviewUrl;
-    if (value.contains('shoe')) return shoePreviewUrl;
-    return clothPreviewUrl;
+    if (value.contains('watch')) return watchPreviewUrl;
+    if (value.contains('corset')) return corsetPreviewUrl;
+    return shoePreviewUrl;
   }
 }
