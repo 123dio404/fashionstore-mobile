@@ -253,9 +253,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
       ];
 
-  static const _cards = <(String, String, Color, String, bool)>[
-    ('visa', 'Visa •••• 4242', Color(0xFF1A1F71), 'pm_card_visa', false),
-    ('mc', 'Mastercard •••• 0002', Color(0xFFEB001B), 'pm_card_declined', true),
+  static const _cards = <(String, String, Color, String, bool, String)>[
+    ('visa', 'Visa •••• 4242', Color(0xFF1A1F71), 'pm_card_visa', false, '12/28'),
+    ('mc', 'Mastercard •••• 0002', Color(0xFFEB001B), 'pm_card_declined', true, '09/27'),
   ];
 
   String get _payLabel => switch (_payMethod) {
@@ -359,15 +359,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         trailing: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: c.$5 ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
+                            color: AppColors.borderLight.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            c.$5 ? 'Simular Rechazo' : 'Aprobación',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: c.$5 ? AppColors.danger : const Color(0xFF2E7D32),
+                            'Exp. ${c.$6}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.muted,
                             ),
                           ),
                         ),
