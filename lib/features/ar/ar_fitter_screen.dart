@@ -78,6 +78,7 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
   Future<void> _selectProduct(Product product, AppState s) async {
     setState(() {
       _product = product;
+      _model = null;
       _picker = false;
       _loading = true;
       _capture = null;

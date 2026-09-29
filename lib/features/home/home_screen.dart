@@ -38,15 +38,16 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
-  List<Product> get _filtered {
-    if (_category == 'Todos') return kProducts;
+  List<Product> _filtered(AppState s) {
+    if (_category == 'Todos') return s.products;
     if (_category == 'Ofertas') {
-      return kProducts.where((p) => p.discount >= 27).toList();
+      return s.products.where((p) => p.discount >= 27).toList();
     }
-    return kProducts.where((p) => p.category == _category).toList();
+    return s.products.where((p) => p.category == _category).toList();
   }
 
-  List<Product> get _featured => kProducts.where((p) => p.isFeatured).toList();
+  List<Product> _featured(AppState s) =>
+      s.products.where((p) => p.isFeatured).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -330,15 +331,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 292,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: _featured.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, i) => _featuredCard(_featured[i]),
-          ),
+        Builder(
+          builder: (context) {
+            final featured = _featured(s);
+            return SizedBox(
+              height: 292,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: featured.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, i) => _featuredCard(featured[i]),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -451,21 +457,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 )
-              : _filtered.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Center(
-                        child: Text(
-                          'No hay productos en esta categoría.',
-                          style: AppTextStyles.bodySize(14,
-                              color: AppColors.muted),
+              : Builder(
+                  builder: (context) {
+                    final filtered = _filtered(s);
+                    if (filtered.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Center(
+                          child: Text(
+                            'No hay productos en esta categoría.',
+                            style: AppTextStyles.bodySize(14,
+                                color: AppColors.muted),
+                          ),
                         ),
-                      ),
-                    )
-                  : GridView.builder(
+                      );
+                    }
+                    return GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _filtered.length,
+                      itemCount: filtered.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -474,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         childAspectRatio: 0.50,
                       ),
                       itemBuilder: (_, i) {
-                        final p = _filtered[i];
+                        final p = filtered[i];
                         return ProductCard(
                           product: p,
                           onTap: () => widget.onOpenProduct(p),
@@ -483,7 +493,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           onToggleFav: () => s.toggleFav(p.id),
                         );
                       },
-                    ),
+                    );
+                  },
+                ),
         ),
       ],
     );

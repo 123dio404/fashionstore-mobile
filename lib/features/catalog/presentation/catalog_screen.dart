@@ -71,9 +71,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
   bool get _hasFilters =>
       _brand != null || _sizes.isNotEmpty || _minPrice != null || _maxPrice != null;
 
-  List<Product> get _results {
+  List<Product> _results(AppState s) {
     final q = _search.text.trim().toLowerCase();
-    final list = kProducts.where((p) {
+    final list = s.products.where((p) {
       if (_category == 'Ofertas' && p.discount < 27) return false;
       if (_category != 'Todos' &&
           _category != 'Ofertas' &&
@@ -106,13 +106,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return list;
   }
 
-  List<String> get _brands =>
-      kProducts.map((p) => p.brand).toSet().toList()..sort();
+  List<String> _brands(AppState s) =>
+      s.products.map((p) => p.brand).toSet().toList()..sort();
 
   @override
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
-    final results = _results;
+    final results = _results(s);
     return Stack(
       children: [
         Column(
@@ -313,7 +313,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () => _openFilters(),
+              onTap: () => _openFilters(s),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -387,7 +387,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         ),
       );
 
-  void _openFilters() {
+  void _openFilters(AppState s) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -424,7 +424,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _brands
+                children: _brands(s)
                     .map((b) => PillChip(
                           label: b,
                           selected: _brand == b,

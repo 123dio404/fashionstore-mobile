@@ -52,8 +52,12 @@ class _AppShellState extends State<AppShell> {
 
     final Widget body;
     if (_detail != null) {
+      final currentProd = s.products.firstWhere(
+        (p) => p.id == _detail!.id,
+        orElse: () => _detail!,
+      );
       body = ProductDetailScreen(
-        product: _detail!,
+        product: currentProd,
         onBack: () => setState(() => _detail = null),
       );
     } else {

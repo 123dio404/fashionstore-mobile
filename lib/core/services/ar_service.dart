@@ -55,11 +55,17 @@ enum ArModelSource { product, catalog, category, fallback }
 
 /// Modelo 3D resuelto para el vestidor.
 class ArModel {
-  const ArModel({required this.url, required this.source, this.name});
+  const ArModel({
+    required this.url,
+    required this.source,
+    this.name,
+    this.previewOverride,
+  });
 
   final String url;
   final ArModelSource source;
   final String? name;
+  final String? previewOverride;
 
   String get label => switch (source) {
         ArModelSource.product => 'model_3d_url del producto',
@@ -69,7 +75,11 @@ class ArModel {
       };
 
   /// Póster oficial del modelo (mientras carga el 3D).
-  String get previewUrl => ArConstants.previewFor(url);
+  String get previewUrl {
+    final override = previewOverride?.trim();
+    if (override != null && override.isNotEmpty) return override;
+    return ArConstants.previewFor(url);
+  }
 }
 
 /// CU17 — Vestidor Virtual AR.
@@ -166,11 +176,21 @@ class ArService {
   Future<ArModel?> resolveModel(Product product) async {
     final own = product.model3dUrl?.trim();
     if (own != null && own.isNotEmpty) {
-      return ArModel(url: own, source: ArModelSource.product, name: product.name);
+      return ArModel(
+        url: own,
+        source: ArModelSource.product,
+        name: product.name,
+        previewOverride: product.image,
+      );
     }
     final remote = await _catalogModelUrl(product.name);
     if (remote != null) {
-      return ArModel(url: remote, source: ArModelSource.catalog, name: product.name);
+      return ArModel(
+        url: remote,
+        source: ArModelSource.catalog,
+        name: product.name,
+        previewOverride: product.image,
+      );
     }
     final cat = product.category.toLowerCase();
     if (cat.contains('calz') || cat.contains('zapat')) {
@@ -178,6 +198,7 @@ class ArService {
         url: ArConstants.shoeModelUrl,
         source: ArModelSource.category,
         name: product.name,
+        previewOverride: product.image,
       );
     }
     if (cat.contains('acces') || cat.contains('gafa')) {
@@ -185,6 +206,7 @@ class ArService {
         url: ArConstants.sunglassesModelUrl,
         source: ArModelSource.category,
         name: product.name,
+        previewOverride: product.image,
       );
     }
     return null;

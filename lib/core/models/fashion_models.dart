@@ -109,6 +109,50 @@ class Product {
 
   /// CU17: `true` cuando el producto declara su propio modelo 3D.
   bool get hasOwnModel3d => model3dUrl != null && model3dUrl!.trim().isNotEmpty;
+
+  Product copyWith({
+    int? id,
+    String? name,
+    String? brand,
+    String? category,
+    double? price,
+    double? oldPrice,
+    int? discount,
+    String? image,
+    List<String>? images,
+    List<ProductColor>? colors,
+    List<String>? sizes,
+    String? description,
+    Map<String, int>? stock,
+    double? rating,
+    int? reviews,
+    bool? isNew,
+    bool? isFeatured,
+    String? model3dUrl,
+    String? model3dFormat,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      brand: brand ?? this.brand,
+      category: category ?? this.category,
+      price: price ?? this.price,
+      oldPrice: oldPrice ?? this.oldPrice,
+      discount: discount ?? this.discount,
+      image: image ?? this.image,
+      images: images ?? this.images,
+      colors: colors ?? this.colors,
+      sizes: sizes ?? this.sizes,
+      description: description ?? this.description,
+      stock: stock ?? this.stock,
+      rating: rating ?? this.rating,
+      reviews: reviews ?? this.reviews,
+      isNew: isNew ?? this.isNew,
+      isFeatured: isFeatured ?? this.isFeatured,
+      model3dUrl: model3dUrl ?? this.model3dUrl,
+      model3dFormat: model3dFormat ?? this.model3dFormat,
+    );
+  }
 }
 
 class CartItem {

@@ -71,11 +71,13 @@ class ArConstants {
   /// Vista previa (póster) que corresponde a un modelo.
   static String previewFor(String modelUrl) {
     final value = modelUrl.toLowerCase();
+    if (value.contains('blazer')) return blazerPreviewUrl;
     if (value.contains('sunglasses')) return sunglassesPreviewUrl;
     if (value.contains('watch') || value.contains('apple_watch')) return watchPreviewUrl;
     if (value.contains('cap') || value.contains('baseball')) return capPreviewUrl;
     if (value.contains('hat')) return hatPreviewUrl;
     if (value.contains('jacket') || value.contains('denim')) return jacketPreviewUrl;
-    return shoePreviewUrl;
+    if (value.contains('shoe')) return shoePreviewUrl;
+    return '';
   }
 }

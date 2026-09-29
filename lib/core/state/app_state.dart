@@ -25,6 +25,7 @@ class AppState extends ChangeNotifier {
       isRead: false,
     ),
   ];
+  List<Product> _products = List.of(kProducts);
   UserPreferences _prefs = kDefaultPrefs;
   Purchase? _lastPurchase;
   Product? _arProduct;
@@ -38,6 +39,7 @@ class AppState extends ChangeNotifier {
     super.dispose();
   }
 
+  List<Product> get products => List.unmodifiable(_products);
   List<CartItem> get cart => List.unmodifiable(_cart);
   List<int> get favs => List.unmodifiable(_favs);
   List<Reservation> get reservations => List.unmodifiable(_reservations);
@@ -54,6 +56,37 @@ class AppState extends ChangeNotifier {
   int get reservCount =>
       _reservations.where((r) => r.status == 'confirmada').length;
   int get favCount => _favs.length;
+
+  void completePurchase(Purchase p) {
+    _purchases.insert(0, p);
+    _cart.clear();
+    _lastPurchase = p;
+
+    // Descontar inventario de la sucursal de la que se compró
+    final storeName = p.store ?? 'Sucursal Centro';
+    final branchKey = _extractBranchKey(storeName);
+
+    _products = _products.map((prod) {
+      final matches = p.items.where((it) => it.productId == prod.id).toList();
+      if (matches.isEmpty) return prod;
+      final boughtQty = matches.fold<int>(0, (sum, it) => sum + it.qty);
+
+      final newStock = Map<String, int>.from(prod.stock);
+      final current = newStock[branchKey] ?? 0;
+      newStock[branchKey] = (current - boughtQty).clamp(0, 9999);
+
+      return prod.copyWith(stock: newStock);
+    }).toList();
+
+    notifyListeners();
+  }
+
+  static String _extractBranchKey(String store) {
+    final lower = store.toLowerCase();
+    if (lower.contains('norte')) return 'Norte';
+    if (lower.contains('sur')) return 'Sur';
+    return 'Centro';
+  }
 
   void addNotification(NotificationItem item) {
     _notifications.insert(0, item);
@@ -169,13 +202,6 @@ class AppState extends ChangeNotifier {
     _reservations = _reservations
         .map((r) => r.id == id ? r.copyWith(status: 'cancelada') : r)
         .toList();
-    notifyListeners();
-  }
-
-  void completePurchase(Purchase p) {
-    _purchases.insert(0, p);
-    _cart.clear();
-    _lastPurchase = p;
     notifyListeners();
   }
 

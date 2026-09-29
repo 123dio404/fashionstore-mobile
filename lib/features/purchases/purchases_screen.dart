@@ -114,33 +114,32 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      ClipRect(
+                      Expanded(
                         child: SizedBox(
                           height: 44,
-                          child: OverflowBox(
-                            maxWidth: 200,
-                            alignment: Alignment.centerLeft,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: List.generate(
-                                p.items.take(3).length,
-                                (i) => Container(
-                                  width: 36,
-                                  height: 44,
-                                  margin: EdgeInsets.only(left: i > 0 ? 8 : 0),
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.borderLight,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: NetImage(url: p.items[i].image),
-                                ),
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: p.items.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            itemBuilder: (_, i) => Container(
+                              width: 36,
+                              height: 44,
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                color: AppColors.borderLight,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: NetImage(
+                                url: p.items[i].image,
+                                width: 36,
+                                height: 44,
                               ),
                             ),
                           ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 12),
                       Text('\$${p.total.toStringAsFixed(2)}',
                           style: AppTextStyles.bodySize(16,
                               weight: FontWeight.w800)),
@@ -172,7 +171,11 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                               color: AppColors.borderLight,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: NetImage(url: it.image),
+                            child: NetImage(
+                              url: it.image,
+                              width: 52,
+                              height: 62,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -184,11 +187,15 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTextStyles.bodySize(12,
                                         weight: FontWeight.w600)),
+                                const SizedBox(height: 2),
                                 Text(
                                   'Talla ${it.size} · ${it.color} · ×${it.qty}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: AppTextStyles.bodySize(11,
                                       color: AppColors.muted),
                                 ),
+                                const SizedBox(height: 2),
                                 Text(
                                   '\$${(it.price * it.qty).toStringAsFixed(2)}',
                                   style: AppTextStyles.bodySize(13,
@@ -253,8 +260,8 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           children: [
             Text(label,
                 style: AppTextStyles.bodySize(12, color: AppColors.muted)),
-            const Spacer(),
-            Flexible(
+            const SizedBox(width: 8),
+            Expanded(
               child: Text(
                 value,
                 textAlign: TextAlign.right,
