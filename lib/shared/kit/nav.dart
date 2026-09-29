@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/models/fashion_models.dart';
+import '../../core/state/app_scope.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Cabecera de pantalla del prototipo (título serif + subtítulo + volver).
@@ -161,3 +163,58 @@ class SuccessToast extends StatelessWidget {
     );
   }
 }
+
+/// Botón de campana con contador de notificaciones pendientes para cabeceras.
+class NotificationBellButton extends StatelessWidget {
+  const NotificationBellButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppScope.of(context);
+    final count = s.unreadNotificationsCount;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Material(
+          color: AppColors.surface,
+          shape: const CircleBorder(),
+          elevation: 1.5,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => s.openOverlay(OverlayScreen.notifications),
+            child: const SizedBox(
+              width: 36,
+              height: 36,
+              child: Icon(Icons.notifications_none, size: 20, color: AppColors.dark),
+            ),
+          ),
+        ),
+        if (count > 0)
+          Positioned(
+            top: -2,
+            right: -2,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: AppColors.accent,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              alignment: Alignment.center,
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+

@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/kit/buttons.dart';
 import '../../../shared/kit/cart_widgets.dart';
 import '../../../shared/kit/chips.dart';
+import '../../../shared/kit/nav.dart';
 import '../../../shared/kit/product_card.dart';
 import '../../../shared/kit/states.dart';
 
@@ -197,6 +198,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     iconSize: 16,
                     onPressed: () => s.openOverlay(OverlayScreen.voice),
                   ),
+                  const SizedBox(width: 8),
+                  const NotificationBellButton(),
                 ],
               ),
             ),

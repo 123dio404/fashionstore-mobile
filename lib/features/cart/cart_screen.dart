@@ -54,7 +54,11 @@ class _CartScreenState extends State<CartScreen> {
 
     return Column(
       children: [
-        const AppTopBar(title: 'Mi Carrito', subtitle: 'FashionStore'),
+        const AppTopBar(
+          title: 'Mi Carrito',
+          subtitle: 'FashionStore',
+          right: NotificationBellButton(),
+        ),
         Expanded(
           child: s.cart.isEmpty
               ? EmptyState(

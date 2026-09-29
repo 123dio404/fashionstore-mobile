@@ -120,11 +120,11 @@ class _AppShellState extends State<AppShell> {
               Positioned.fill(
                 child: ColoredBox(color: AppColors.background, child: _overlay(s)),
               ),
-            if (s.toast != null && s.overlay == OverlayScreen.none && _detail == null)
+            if (s.toast != null)
               Positioned(
                 left: 16,
                 right: 16,
-                bottom: 92,
+                bottom: s.overlay != OverlayScreen.none ? 24 : 92,
                 child: SuccessToast(
                   message: s.toast!,
                   onDismiss: () => s.setToast(null),
