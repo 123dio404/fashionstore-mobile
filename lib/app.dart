@@ -25,6 +25,14 @@ class _FashionStoreAppState extends State<FashionStoreApp> {
   final AppState _state = AppState();
 
   @override
+  void initState() {
+    super.initState();
+    _state.onLogout = () async {
+      await widget.auth.logout();
+    };
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AppScope(
       state: _state,
@@ -50,7 +58,14 @@ class _FashionStoreAppState extends State<FashionStoreApp> {
       case AppPhase.splash:
         return SplashScreen(
           key: const ValueKey('splash'),
-          onDone: () => s.goTo(AppPhase.onboarding),
+          onDone: () async {
+            final hasToken = await widget.auth.hasToken();
+            if (hasToken) {
+              s.goTo(AppPhase.app);
+            } else {
+              s.goTo(AppPhase.onboarding);
+            }
+          },
         );
       case AppPhase.onboarding:
         return OnboardingScreen(

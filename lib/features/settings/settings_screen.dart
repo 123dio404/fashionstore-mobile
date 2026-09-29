@@ -304,9 +304,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     label: 'Cerrar sesión',
                     tone: DButtonTone.accent,
                     expanded: true,
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.pop(ctx);
-                      s.goTo(AppPhase.login);
+                      await s.logout();
                     },
                   ),
                 ),

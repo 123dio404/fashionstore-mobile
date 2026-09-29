@@ -338,9 +338,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         icon: Icons.logout,
         tone: DButtonTone.outline,
         expanded: true,
-        onPressed: () {
+        onPressed: () async {
           s.setToast('Sesión cerrada');
-          s.goTo(AppPhase.login);
+          await s.logout();
         },
       );
 }

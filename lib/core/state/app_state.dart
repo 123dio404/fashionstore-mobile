@@ -72,9 +72,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> Function()? onLogout;
+
   void goTo(AppPhase p) {
     phase = p;
     notifyListeners();
+  }
+
+  Future<void> logout() async {
+    if (onLogout != null) {
+      await onLogout!();
+    }
+    goTo(AppPhase.login);
   }
 
   void setTab(AppTab t) {

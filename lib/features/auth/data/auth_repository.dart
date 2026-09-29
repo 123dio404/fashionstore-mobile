@@ -41,5 +41,12 @@ class AuthRepository {
     return UserResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
+  SecureStorage get storage => _storage;
+
+  Future<bool> hasToken() async {
+    final token = await _storage.readToken();
+    return token != null && token.trim().isNotEmpty;
+  }
+
   Future<void> logout() => _storage.deleteToken();
 }

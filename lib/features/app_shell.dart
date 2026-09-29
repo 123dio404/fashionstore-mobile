@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/models/fashion_models.dart';
 import '../core/state/app_scope.dart';
@@ -35,6 +36,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   Product? _detail;
+  DateTime? _lastBackPress;
 
   void _openProduct(Product p) => setState(() => _detail = p);
 
@@ -64,38 +66,68 @@ class _AppShellState extends State<AppShell> {
       };
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              if (s.isOffline) const OfflineBanner(),
-              Expanded(child: body),
-              if (showNav)
-                BottomNav(
-                  active: s.tab,
-                  onTab: s.setTab,
-                  cartCount: s.cartCount,
-                  reservCount: s.reservCount,
-                ),
-            ],
-          ),
-          if (s.overlay != OverlayScreen.none)
-            Positioned.fill(
-              child: ColoredBox(color: AppColors.background, child: _overlay(s)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // 1. Si hay un overlay abierto (Vestidor AR, Ajustes, Chatbot, etc.), cerrarlo
+        if (s.overlay != OverlayScreen.none) {
+          s.closeOverlay();
+          return;
+        }
+        // 2. Si está en detalle de producto, volver al catálogo/home
+        if (_detail != null) {
+          setState(() => _detail = null);
+          return;
+        }
+        // 3. Si está en otra pestaña, volver a Inicio
+        if (s.tab != AppTab.home) {
+          s.setTab(AppTab.home);
+          return;
+        }
+        // 4. Si está en Inicio sin overlays ni detalle: doble toque para salir
+        final now = DateTime.now();
+        if (_lastBackPress == null ||
+            now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
+          _lastBackPress = now;
+          s.setToast('Presiona atrás de nuevo para salir');
+          return;
+        }
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                if (s.isOffline) const OfflineBanner(),
+                Expanded(child: body),
+                if (showNav)
+                  BottomNav(
+                    active: s.tab,
+                    onTab: s.setTab,
+                    cartCount: s.cartCount,
+                    reservCount: s.reservCount,
+                  ),
+              ],
             ),
-          if (s.toast != null && s.overlay == OverlayScreen.none && _detail == null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 92,
-              child: SuccessToast(
-                message: s.toast!,
-                onDismiss: () => s.setToast(null),
+            if (s.overlay != OverlayScreen.none)
+              Positioned.fill(
+                child: ColoredBox(color: AppColors.background, child: _overlay(s)),
               ),
-            ),
-        ],
+            if (s.toast != null && s.overlay == OverlayScreen.none && _detail == null)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 92,
+                child: SuccessToast(
+                  message: s.toast!,
+                  onDismiss: () => s.setToast(null),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

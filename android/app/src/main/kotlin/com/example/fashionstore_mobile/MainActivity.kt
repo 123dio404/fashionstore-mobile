@@ -127,7 +127,7 @@ class MainActivity : FlutterActivity() {
         return candidates.firstOrNull { it != null && it.resolveActivity(packageManager) != null }
     }
 
-    /** URL oficial de Scene Viewer. `resizable=false` fija la escala real 1:1. */
+    /** URL oficial de Scene Viewer. `resizable=true` permite escalar con los dedos y reposicionar la prenda. */
     private fun sceneViewerUrl(modelUrl: String, title: String, mode: String): Uri =
         Uri.Builder()
             .scheme("https")
@@ -136,7 +136,7 @@ class MainActivity : FlutterActivity() {
             .appendQueryParameter("file", modelUrl)
             .appendQueryParameter("mode", mode)
             .appendQueryParameter("title", title)
-            .appendQueryParameter("resizable", "false")
+            .appendQueryParameter("resizable", "true")
             .build()
 
     /** Variante `intent://arvr.google.com/scene-viewer/1.0` con fallback de navegador. */
@@ -146,7 +146,7 @@ class MainActivity : FlutterActivity() {
                 "?file=${Uri.encode(modelUrl)}" +
                 "&mode=$mode" +
                 "&title=${Uri.encode(title)}" +
-                "&resizable=false" +
+                "&resizable=true" +
                 "#Intent;scheme=https;package=$AR_CORE_PACKAGE;" +
                 "action=android.intent.action.VIEW;" +
                 "S.browser_fallback_url=${Uri.encode(url.toString())};end;"

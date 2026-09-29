@@ -297,9 +297,11 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
                       poster: _model!.previewUrl,
                       ar: true,
                       arModes: const ['scene-viewer', 'webxr', 'quick-look'],
-                      arScale: ArScale.fixed,
+                      arScale: ArScale.auto,
                       arPlacement: ArPlacement.floor,
                       cameraControls: true,
+                      disableZoom: false,
+                      disablePan: false,
                       autoRotate: true,
                       autoRotateDelay: 800,
                       rotationPerSecond: '25deg',
@@ -319,7 +321,7 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
             const Positioned(
               right: 12,
               top: 12,
-              child: _ViewerChip(icon: Icons.straighten, label: 'Escala 1:1'),
+              child: _ViewerChip(icon: Icons.pinch, label: 'Escala libre'),
             ),
             Positioned(
               left: 12,
@@ -330,7 +332,7 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
                     ? Icons.check_circle_outline
                     : Icons.info_outline,
                 label: _availability.ready
-                    ? 'ARCore disponible · ancla en piso o mesa'
+                    ? 'ARCore disponible · escala y mueve con los dedos'
                     : 'Sin ARCore: vista 3D interactiva',
               ),
             ),
@@ -433,7 +435,26 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
   }
 
   /// Abre el probador con cámara frontal selfie (Espejo Virtual en vivo).
-  void _openVirtualMirror(AppState s) {
+  Future<void> _openVirtualMirror(AppState s) async {
+    final granted = await _ar.requestCameraPermission();
+    if (!mounted) return;
+    if (!granted) {
+      s.setToast('Permiso de cámara denegado. Habilítalo para usar el probador.');
+      return;
+    }
+
+    final controller = WebViewController(
+      onPermissionRequest: (WebViewPermissionRequest request) {
+        request.grant();
+      },
+    )
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(
+        Uri.parse(
+            'https://fashionstore-web-eight.vercel.app/fitting/${_product.id}'),
+      );
+
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -454,14 +475,7 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
                 color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
           ),
         ),
-        body: WebViewWidget(
-          controller: WebViewController()
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..loadRequest(
-              Uri.parse(
-                  'https://fashionstore-web-eight.vercel.app/fitting/${_product.id}'),
-            ),
-        ),
+        body: WebViewWidget(controller: controller),
       ),
     );
   }
