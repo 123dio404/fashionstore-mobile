@@ -35,6 +35,9 @@ class ArConstants {
   /// Moda / Chaqueta — `denim_jacket.glb` alojado en Vercel.
   static const jacketModelUrl = '$_vercelModels/denim_jacket.glb';
 
+  /// Moda / Blazer — `blazer.glb` alojado en Vercel.
+  static const blazerModelUrl = '$_vercelModels/blazer.glb';
+
   /// Respaldo por defecto para calzado.
   static const fallbackModelUrl = shoeModelUrl;
 
@@ -51,6 +54,8 @@ class ArConstants {
       'https://images.unsplash.com/photo-1514327605112-b887c0e61c0a?w=400&h=520&fit=crop&auto=format';
   static const jacketPreviewUrl =
       'https://images.unsplash.com/photo-1603189343302-e603f7add05a?w=400&h=520&fit=crop&auto=format';
+  static const blazerPreviewUrl =
+      'https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?w=400&h=520&fit=crop&auto=format';
 
   /// Canal nativo implementado en `MainActivity.kt`.
   static const channel = 'com.fashionstore/ar';

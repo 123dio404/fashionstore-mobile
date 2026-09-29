@@ -31,6 +31,7 @@ const List<Product> kProducts = [
     rating: 4.7,
     reviews: 128,
     isFeatured: true,
+    model3dUrl: ArConstants.blazerModelUrl,
   ),
   Product(
     id: 2,
@@ -108,6 +109,7 @@ const List<Product> kProducts = [
     rating: 4.8,
     reviews: 211,
     isFeatured: true,
+    model3dUrl: ArConstants.blazerModelUrl,
   ),
   Product(
     id: 5,
