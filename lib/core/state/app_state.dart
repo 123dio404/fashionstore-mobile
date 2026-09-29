@@ -2,6 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../features/auth/data/models/auth_models.dart';
+import '../../features/catalog/data/catalog_repository.dart';
+import '../../features/catalog/data/models/catalog_models.dart';
+import '../../features/commerce/data/commerce_repository.dart';
 import '../data/mock_data.dart';
 import '../models/fashion_models.dart';
 
@@ -29,6 +33,9 @@ class AppState extends ChangeNotifier {
   UserPreferences _prefs = kDefaultPrefs;
   Purchase? _lastPurchase;
   Product? _arProduct;
+  UserResponse? _currentUser;
+  String _searchQuery = '';
+  bool _stockLoaded = false;
   bool _isOffline = false;
   String? _toast;
   Timer? _toastTimer;
@@ -49,6 +56,9 @@ class AppState extends ChangeNotifier {
   UserPreferences get prefs => _prefs;
   Purchase? get lastPurchase => _lastPurchase;
   Product? get arProduct => _arProduct;
+  UserResponse? get currentUser => _currentUser;
+  String get searchQuery => _searchQuery;
+  bool get stockLoaded => _stockLoaded;
   bool get isOffline => _isOffline;
   String? get toast => _toast;
 
@@ -56,6 +66,103 @@ class AppState extends ChangeNotifier {
   int get reservCount =>
       _reservations.where((r) => r.status == 'confirmada').length;
   int get favCount => _favs.length;
+
+  void setCurrentUser(UserResponse? user) {
+    _currentUser = user;
+    notifyListeners();
+  }
+
+  void setSearchQuery(String q) {
+    _searchQuery = q;
+    notifyListeners();
+  }
+
+  /// Sincroniza el inventario real por sucursal contra la base de datos de la API
+  /// (`GET /inventory/stock`), idéntico al cálculo de la versión Web (`CatalogStore`).
+  Future<void> refreshStockFromRemote({CatalogRepository? catalogRepo}) async {
+    try {
+      final repo = catalogRepo ?? CatalogRepository();
+      final branches = await repo.branches();
+      final apiProducts = await repo.products();
+      final stocks = await repo.inventoryStock();
+
+      _products = _products.map((p) {
+        final apiProd = apiProducts.cast<ProductResponse?>().firstWhere(
+              (ap) =>
+                  ap != null &&
+                  (ap.name.trim().toLowerCase() == p.name.trim().toLowerCase() ||
+                      ap.id == p.id),
+              orElse: () => null,
+            );
+        if (apiProd == null) return p;
+
+        final variantIds = apiProd.variants.map((v) => v.id).toSet();
+        final newStockMap = Map<String, int>.from(p.stock);
+
+        for (final branch in branches) {
+          final bKey = branch.name
+              .replaceFirst(RegExp(r'^Sucursal\s+', caseSensitive: false), '')
+              .trim();
+          final branchTotal = stocks
+              .where((s) =>
+                  (s['branch_id'] == branch.id) &&
+                  variantIds.contains(s['variant_id']))
+              .fold<int>(0, (sum, s) {
+            final avail = (s['available_stock'] as num?)?.toInt() ?? 0;
+            return sum + (avail > 0 ? avail : 0);
+          });
+
+          newStockMap[bKey] = branchTotal;
+          final capitalized = bKey.isNotEmpty
+              ? bKey[0].toUpperCase() + bKey.substring(1).toLowerCase()
+              : bKey;
+          newStockMap[capitalized] = branchTotal;
+        }
+
+        return p.copyWith(stock: newStockMap);
+      }).toList();
+
+      _stockLoaded = true;
+      notifyListeners();
+    } catch (_) {
+      _stockLoaded = true;
+    }
+  }
+
+  /// Sincroniza compras remotas desde `GET /commerce/sales` para que
+  /// compras hechas en Web se reflejen inmediatamente en las notificaciones del móvil.
+  Future<void> syncRemoteSales({CommerceRepository? commerceRepo}) async {
+    try {
+      final repo = commerceRepo ?? CommerceRepository();
+      final sales = await repo.listSales();
+      var changed = false;
+      for (final sale in sales) {
+        final id = sale['id'];
+        if (id == null) continue;
+        final notifId = 'NOTIF-SALE-$id';
+        final exists = _notifications.any((n) => n.id == notifId);
+        if (!exists) {
+          final total = (sale['total'] as num?)?.toDouble() ?? 0.0;
+          _notifications.insert(
+            0,
+            NotificationItem(
+              id: notifId,
+              title: '¡Compra confirmada! Orden #ORD-$id',
+              message:
+                  'Tu compra por \$${total.toStringAsFixed(2)} fue registrada correctamente y el stock fue actualizado.',
+              date: 'Hoy',
+              type: 'purchase_success',
+              isRead: false,
+            ),
+          );
+          changed = true;
+        }
+      }
+      if (changed) {
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
 
   void completePurchase(Purchase p) {
     _purchases.insert(0, p);
@@ -77,6 +184,10 @@ class AppState extends ChangeNotifier {
 
       return prod.copyWith(stock: newStock);
     }).toList();
+
+    // Sincronizar stock y ventas actualizadas con el backend
+    unawaited(refreshStockFromRemote().catchError((_) {}));
+    unawaited(syncRemoteSales().catchError((_) {}));
 
     notifyListeners();
   }

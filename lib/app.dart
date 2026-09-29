@@ -61,8 +61,15 @@ class _FashionStoreAppState extends State<FashionStoreApp> {
           onDone: () async {
             final hasToken = await widget.auth.hasToken();
             if (hasToken) {
+              try {
+                final me = await widget.auth.currentUser();
+                s.setCurrentUser(me);
+              } catch (_) {}
+              s.refreshStockFromRemote();
+              s.syncRemoteSales();
               s.goTo(AppPhase.app);
             } else {
+              s.refreshStockFromRemote();
               s.goTo(AppPhase.onboarding);
             }
           },

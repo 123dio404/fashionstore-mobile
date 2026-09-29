@@ -39,11 +39,26 @@ class _CatalogScreenState extends State<CatalogScreen> {
   double? _minPrice;
   double? _maxPrice;
   bool _loading = true;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final s = AppScope.of(context);
+    if (!_initialized) {
+      _initialized = true;
+      s.refreshStockFromRemote();
+      s.syncRemoteSales();
+    }
+    if (s.searchQuery.isNotEmpty && _search.text != s.searchQuery) {
+      _search.text = s.searchQuery;
+    }
   }
 
   @override
@@ -54,7 +69,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
+    await Future<void>.delayed(const Duration(milliseconds: 600));
     if (mounted) setState(() => _loading = false);
   }
 
@@ -67,6 +82,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
       _category = 'Todos';
       _search.clear();
     });
+    AppScope.of(context).setSearchQuery('');
   }
 
   bool get _hasFilters =>

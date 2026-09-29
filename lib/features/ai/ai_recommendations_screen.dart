@@ -12,6 +12,13 @@ import '../../shared/kit/net_image.dart';
 
 const _aiCategories = ['Mujer', 'Hombre', 'Calzado', 'Accesorios'];
 const _aiSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const _aiSeasons = [
+  'Todas las temporadas',
+  'Otoño-Invierno',
+  'Primavera-Verano',
+  'Verano',
+  'Invierno',
+];
 
 /// Recomendaciones IA: perfil de estilo → sugerencias con puntaje de match.
 class AiRecommendationsScreen extends StatefulWidget {
@@ -27,27 +34,70 @@ class AiRecommendationsScreen extends StatefulWidget {
 class _AiRecommendationsScreenState extends State<AiRecommendationsScreen> {
   String _category = 'Todos';
   String _brand = '';
+  String _season = 'Otoño-Invierno';
   final Set<String> _sizes = {};
   double? _min;
   double? _max;
   bool _done = false;
   bool _generating = false;
+  bool _prefsInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_prefsInitialized) {
+      _prefsInitialized = true;
+      final s = AppScope.of(context);
+      if (s.prefs.sizes.isNotEmpty) {
+        _sizes.addAll(s.prefs.sizes.where(_aiSizes.contains));
+      }
+      if (s.prefs.brands.isNotEmpty &&
+          kBrandsList.contains(s.prefs.brands.first)) {
+        _brand = s.prefs.brands.first;
+      }
+    }
+  }
 
   bool get _budgetError => _min != null && _max != null && _min! > _max!;
 
   int _stockOf(Product p) => p.stock.values.fold(0, (a, b) => a + b);
 
-  List<(Product, int)> get _results {
+  List<(Product, int)> _getResults(AppState s) {
     final scored = <(Product, int)>[];
-    for (final p in kProducts) {
+    for (final p in s.products) {
       if (_min != null && p.price < _min!) continue;
       if (_max != null && p.price > _max!) continue;
-      var s = 0;
-      if (_category != 'Todos' && p.category == _category) s += 40;
-      if (_brand.isNotEmpty && p.brand == _brand) s += 25;
-      if (_sizes.isNotEmpty && p.sizes.any(_sizes.contains)) s += 25;
-      if (_stockOf(p) > 0) s += 10;
-      scored.add((p, s));
+      var score = 15;
+      if (_category != 'Todos' && p.category == _category) score += 35;
+      if (_brand.isNotEmpty && p.brand == _brand) score += 20;
+      if (_sizes.isNotEmpty && p.sizes.any(_sizes.contains)) score += 25;
+      if (_stockOf(p) > 0) score += 10;
+
+      final pName = p.name.toLowerCase();
+      if (_season == 'Otoño-Invierno' || _season == 'Invierno') {
+        if (pName.contains('blazer') ||
+            pName.contains('abrigo') ||
+            pName.contains('chompa') ||
+            pName.contains('pantalon') ||
+            pName.contains('pantaldn') ||
+            pName.contains('bota') ||
+            pName.contains('lana') ||
+            pName.contains('cuero')) {
+          score += 25;
+        }
+      } else if (_season == 'Primavera-Verano' || _season == 'Verano') {
+        if (pName.contains('vestido') ||
+            pName.contains('camisa') ||
+            pName.contains('lino') ||
+            pName.contains('top') ||
+            pName.contains('short') ||
+            pName.contains('sandalia') ||
+            pName.contains('playa')) {
+          score += 25;
+        }
+      }
+
+      scored.add((p, score.clamp(0, 100)));
     }
     scored.sort((a, b) => b.$2.compareTo(a.$2));
     return scored;
@@ -55,15 +105,30 @@ class _AiRecommendationsScreenState extends State<AiRecommendationsScreen> {
 
   List<String> _reasons(Product p) {
     final r = <String>[];
+    if (_season != 'Todas las temporadas') {
+      final pName = p.name.toLowerCase();
+      if ((_season.contains('Invierno') &&
+              (pName.contains('blazer') ||
+                  pName.contains('lana') ||
+                  pName.contains('abrigo') ||
+                  pName.contains('cuero'))) ||
+          (_season.contains('Verano') &&
+              (pName.contains('vestido') ||
+                  pName.contains('lino') ||
+                  pName.contains('camisa') ||
+                  pName.contains('top')))) {
+        r.add('Temporada $_season');
+      }
+    }
     if (_category != 'Todos' && p.category == _category) {
-      r.add('Categoría favorita');
+      r.add('Categoría ${p.category}');
     }
-    if (_brand.isNotEmpty && p.brand == _brand) r.add('Tu marca');
+    if (_brand.isNotEmpty && p.brand == _brand) r.add('Marca ${p.brand}');
     if (_sizes.isNotEmpty && p.sizes.any(_sizes.contains)) {
-      r.add('Coincide con tu talla');
+      r.add('Tu talla disponible');
     }
-    if (_stockOf(p) > 0) r.add('Disponible ahora');
-    if (r.isEmpty) r.add('Basado en tus compras');
+    if (_stockOf(p) > 0) r.add('En stock sucursal');
+    if (r.isEmpty) r.add('Basado en tus preferencias');
     return r.take(3).toList();
   }
 
@@ -199,6 +264,20 @@ class _AiRecommendationsScreenState extends State<AiRecommendationsScreen> {
                 .toList(),
           ),
           const SizedBox(height: 18),
+          _label('TEMPORADA'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _aiSeasons
+                .map((seas) => PillChip(
+                      label: seas,
+                      selected: _season == seas,
+                      onTap: () => setState(() => _season = seas),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 18),
           _label('PRESUPUESTO'),
           const SizedBox(height: 8),
           Row(
@@ -225,7 +304,7 @@ class _AiRecommendationsScreenState extends State<AiRecommendationsScreen> {
       );
 
   Widget _resultsList(AppState s) {
-    final results = _results.take(8).toList();
+    final results = _getResults(s).take(8).toList();
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       children: [

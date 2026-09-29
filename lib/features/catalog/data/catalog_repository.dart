@@ -34,4 +34,12 @@ class CatalogRepository {
             AvailabilityResponse.fromJson(item as Map<String, dynamic>))
         .toList();
   }
+
+  /// Consulta el stock real de todas las sucursales en la base de datos de la API
+  Future<List<Map<String, dynamic>>> inventoryStock() async {
+    final response = await _dio.get('/inventory/stock');
+    return (response.data as List<dynamic>)
+        .map((item) => item as Map<String, dynamic>)
+        .toList();
+  }
 }

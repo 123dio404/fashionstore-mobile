@@ -168,6 +168,18 @@ class ArService {
     }
   }
 
+  /// Inicia el reconocimiento de voz nativo en Android (Google Speech Recognizer).
+  Future<String?> startVoiceRecognition() async {
+    try {
+      final text = await _channel.invokeMethod<String>('startVoiceRecognition');
+      return text?.trim();
+    } on PlatformException {
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Resuelve el `.glb` del vestidor en este orden:
   /// 1. `Product.model3dUrl` — el dato que ya trae la UI.
   /// 2. `model_3d_url` del producto en el catálogo del backend (`GET /products`, público).

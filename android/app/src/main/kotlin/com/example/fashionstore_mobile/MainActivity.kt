@@ -4,12 +4,13 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.speech.RecognizerIntent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * CU17 (Vestidor Virtual AR) — puente nativo hacia ARCore.
+ * CU17 (Vestidor Virtual AR) y Búsqueda por Voz nativa.
  *
  * Flutter no renderiza la sesión AR: la delega en **Scene Viewer** (Google Play
  * Services for AR), que aporta la cámara en vivo, la detección y el anclaje de planos
@@ -20,10 +21,12 @@ import io.flutter.plugin.common.MethodChannel
  *  - `requestCameraPermission` → permiso de cámara con el diálogo real del sistema.
  *  - `startSession`            → abre la sesión AR del producto (.glb).
  *  - `installArCore`           → Play Store para instalar/actualizar ARCore.
+ *  - `startVoiceRecognition`   → reconocimiento de voz nativo en español.
  */
 class MainActivity : FlutterActivity() {
 
     private var pendingCameraResult: MethodChannel.Result? = null
+    private var pendingVoiceResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -40,9 +43,39 @@ class MainActivity : FlutterActivity() {
                         )
                     )
                     "installArCore" -> result.success(openArCoreStoreListing())
+                    "startVoiceRecognition" -> startVoiceRecognition(result)
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun startVoiceRecognition(result: MethodChannel.Result) {
+        pendingVoiceResult = result
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Di qué prenda o marca buscas en FashionStore...")
+        }
+        try {
+            startActivityForResult(intent, VOICE_REQUEST_CODE)
+        } catch (e: ActivityNotFoundException) {
+            result.error("NO_SPEECH_RECOGNIZER", "El reconocimiento de voz de Google no está disponible", null)
+            pendingVoiceResult = null
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == VOICE_REQUEST_CODE) {
+            if (resultCode == RESULT_OK && data != null) {
+                val matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                val text = matches?.firstOrNull() ?: ""
+                pendingVoiceResult?.success(text)
+            } else {
+                pendingVoiceResult?.success("")
+            }
+            pendingVoiceResult = null
+        }
     }
 
     // ------------------------------------------------------------------ CU17 --
@@ -191,5 +224,6 @@ class MainActivity : FlutterActivity() {
         const val MODE_AR_PREFERRED = "ar_preferred"
         const val DEFAULT_TITLE = "Vestidor Virtual AR"
         const val CAMERA_REQUEST_CODE = 4711
+        const val VOICE_REQUEST_CODE = 4712
     }
 }

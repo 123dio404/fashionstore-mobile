@@ -66,6 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _categories(),
                         const SizedBox(height: 16),
                         _banners(),
+                        const SizedBox(height: 20),
+                        _aiBanner(s),
                         const SizedBox(height: 28),
                         _featuredRow(),
                         const SizedBox(height: 28),
@@ -316,6 +318,108 @@ class _HomeScreenState extends State<HomeScreen> {
 
   TextStyle get _subStyle =>
       AppTextStyles.bodySize(12, color: Colors.white.withValues(alpha: 0.75));
+
+  Widget _aiBanner(AppState s) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1E1E24), Color(0xFF2E263B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1F000000),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.auto_awesome,
+                    color: AppColors.accent, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'PARA TI · IA',
+                          style: AppTextStyles.bodySize(11,
+                              color: AppColors.accent,
+                              weight: FontWeight.w800,
+                              letterSpacing: 0.8),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Activo',
+                            style: AppTextStyles.bodySize(9,
+                                color: Colors.white, weight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Recomendaciones por talla y temporada',
+                      style: AppTextStyles.bodySize(13,
+                          color: Colors.white, weight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => s.openOverlay(OverlayScreen.aiRecs),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Ver',
+                        style: AppTextStyles.bodySize(12,
+                            color: Colors.white, weight: FontWeight.w700),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(Icons.chevron_right,
+                          size: 16, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 
   Widget _featuredRow() {
     final s = AppScope.of(context);

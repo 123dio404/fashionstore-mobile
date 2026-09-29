@@ -4,6 +4,7 @@ import '../../core/models/fashion_models.dart';
 import '../../core/state/app_scope.dart';
 import '../../core/state/app_state.dart';
 import '../../core/theme/app_theme.dart';
+import '../../features/auth/data/models/auth_models.dart';
 import '../../shared/kit/buttons.dart';
 import '../../shared/kit/cart_widgets.dart';
 import '../../shared/kit/chips.dart';
@@ -96,53 +97,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
 
-  Widget _identity(AppState s) => Row(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: const BoxDecoration(
-              color: AppColors.dark,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'AL',
-              style: AppTextStyles.bodySize(
-                24,
-                color: Colors.white,
-                weight: FontWeight.w800,
-              ),
+  Widget _identity(AppState s) {
+    final user = s.currentUser;
+    final name = (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Ana López';
+    final email = (user?.email.isNotEmpty == true) ? user!.email : 'cliente@fashionstore.com';
+    final role = user?.role.value ?? 'Cliente';
+    final initials = name
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase())
+        .take(2)
+        .join();
+
+    return Row(
+      children: [
+        Container(
+          width: 72,
+          height: 72,
+          decoration: const BoxDecoration(
+            color: AppColors.dark,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            initials.isNotEmpty ? initials : 'FS',
+            style: AppTextStyles.bodySize(
+              24,
+              color: Colors.white,
+              weight: FontWeight.w800,
             ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: _loading
-                ? const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SkeletonBox(height: 16, width: 150),
-                      SizedBox(height: 8),
-                      SkeletonBox(height: 12, width: 190),
-                      SizedBox(height: 8),
-                      SkeletonBox(height: 10, width: 110),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Ana López', style: AppTextStyles.displaySize(20)),
-                      const SizedBox(height: 2),
-                      Text('cliente@fashionstore.com',
-                          style: AppTextStyles.bodySize(12,
-                              color: AppColors.muted)),
-                      const SizedBox(height: 6),
-                      const ToneBadge(label: 'Cliente', tone: BadgeTone.accent),
-                    ],
-                  ),
-          ),
-        ],
-      );
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: _loading
+              ? const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonBox(height: 16, width: 150),
+                    SizedBox(height: 8),
+                    SkeletonBox(height: 12, width: 190),
+                    SizedBox(height: 8),
+                    SkeletonBox(height: 10, width: 110),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: AppTextStyles.displaySize(20)),
+                    const SizedBox(height: 2),
+                    Text(email,
+                        style: AppTextStyles.bodySize(12,
+                            color: AppColors.muted)),
+                    const SizedBox(height: 6),
+                    ToneBadge(
+                      label: role,
+                      tone: role == 'Administrador'
+                          ? BadgeTone.neutral
+                          : (role == 'Cajero'
+                              ? BadgeTone.success
+                              : BadgeTone.accent),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
 
   Widget _stats(AppState s) => Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -320,7 +341,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'CAMBIAR CUENTA ACTIVA',
+                      style: AppTextStyles.bodySize(10,
+                          color: AppColors.muted,
+                          weight: FontWeight.w700,
+                          letterSpacing: 0.6),
+                    ),
                     const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        PillChip(
+                          label: '👤 Cliente',
+                          selected: s.currentUser?.role == Role.cliente ||
+                              s.currentUser == null,
+                          onTap: () => _switchUser(
+                            s,
+                            id: 6,
+                            email: 'cliente@fashionstore.com',
+                            name: 'Ana López',
+                            role: Role.cliente,
+                          ),
+                        ),
+                        PillChip(
+                          label: '💼 Cajero (POS)',
+                          selected: s.currentUser?.role == Role.cajero,
+                          onTap: () => _switchUser(
+                            s,
+                            id: 5,
+                            email: 'cajero@fashionstore.com',
+                            name: 'Cajero Sucursal Centro',
+                            role: Role.cajero,
+                          ),
+                        ),
+                        PillChip(
+                          label: '🛡️ Administrador',
+                          selected: s.currentUser?.role == Role.administrador,
+                          onTap: () => _switchUser(
+                            s,
+                            id: 3,
+                            email: 'admin@fashionstore.com',
+                            name: 'Administrador FashionStore',
+                            role: Role.administrador,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     Text(
                       'Código de descuento: FASHION10',
                       style: AppTextStyles.bodySize(10,
@@ -332,6 +402,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       );
+
+  void _switchUser(
+    AppState s, {
+    required int id,
+    required String email,
+    required String name,
+    required Role role,
+  }) {
+    s.setCurrentUser(UserResponse(
+      id: id,
+      email: email,
+      fullName: name,
+      role: role,
+      isActive: true,
+    ));
+    s.refreshStockFromRemote();
+    s.syncRemoteSales();
+    s.setToast('Sesión activa: $name ($email)');
+  }
 
   Widget _logout(AppState s) => DButton(
         label: 'Cerrar sesión',

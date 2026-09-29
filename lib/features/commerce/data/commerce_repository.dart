@@ -79,4 +79,17 @@ class CommerceRepository {
     );
     return response.data ?? const [];
   }
+
+  /// Listado de ventas registradas en la API (`GET /commerce/sales`).
+  Future<List<Map<String, dynamic>>> listSales() async {
+    final response = await _dio.get(ApiConstants.sales);
+    final data = response.data;
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return [];
+  }
 }

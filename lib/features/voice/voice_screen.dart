@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/models/fashion_models.dart';
+import '../../core/services/ar_service.dart';
 import '../../core/state/app_scope.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/kit/buttons.dart';
@@ -21,7 +22,7 @@ const _history = [
   ('Sneakers talla 40', 'Hace 3 días'),
 ];
 
-/// Búsqueda por voz con transcripción simulada e historial.
+/// Búsqueda por voz con reconocimiento de voz nativo de Google e historial.
 class VoiceScreen extends StatefulWidget {
   const VoiceScreen({super.key});
 
@@ -35,6 +36,8 @@ class _VoiceScreenState extends State<VoiceScreen>
     vsync: this,
     duration: const Duration(milliseconds: 1800),
   )..repeat();
+
+  final _arService = ArService();
 
   /// idle · listening · processing · done
   String _state = 'idle';
@@ -50,28 +53,28 @@ class _VoiceScreenState extends State<VoiceScreen>
     super.dispose();
   }
 
-  void _listen() {
+  Future<void> _listen() async {
     setState(() {
       _state = 'listening';
       _transcript = '';
     });
-    final demo = _demos[DateTime.now().millisecond % _demos.length];
-    var chars = 0;
-    _typer = Timer.periodic(const Duration(milliseconds: 60), (t) {
-      chars++;
+    try {
+      final spoken = await _arService.startVoiceRecognition();
       if (!mounted) return;
-      setState(() => _transcript = demo.substring(0, chars.clamp(0, demo.length)));
-      if (chars >= demo.length) {
-        t.cancel();
-        _delayer = Timer(const Duration(milliseconds: 600), () {
-          if (!mounted) return;
-          setState(() => _state = 'processing');
-          _delayer = Timer(const Duration(milliseconds: 900), () {
-            if (mounted) setState(() => _state = 'done');
-          });
+      if (spoken != null && spoken.trim().isNotEmpty) {
+        setState(() {
+          _state = 'done';
+          _transcript = spoken.trim();
+        });
+      } else {
+        // Si no se capturó audio o el usuario canceló el diálogo nativo
+        setState(() {
+          _state = 'idle';
         });
       }
-    });
+    } catch (_) {
+      if (mounted) setState(() => _state = 'idle');
+    }
   }
 
   void _reset() => setState(() {
@@ -136,6 +139,7 @@ class _VoiceScreenState extends State<VoiceScreen>
                               label: 'Buscar →',
                               tone: DButtonTone.dark,
                               onPressed: () {
+                                s.setSearchQuery(_transcript);
                                 s.setToast('Buscando: $_transcript');
                                 s.closeOverlay();
                                 s.setTab(AppTab.catalog);
@@ -144,13 +148,46 @@ class _VoiceScreenState extends State<VoiceScreen>
                           ],
                         ),
                       ],
-                      if (_state == 'idle')
+                      if (_state == 'idle') ...[
                         Text(
-                          'Di algo como: "Blazer negro talla M"\no "Mostrar ofertas de calzado"',
+                          'Toca el micrófono para hablar o elige una sugerencia:',
                           textAlign: TextAlign.center,
                           style: AppTextStyles.bodySize(12,
                               color: AppColors.mutedLight, height: 1.5),
                         ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          alignment: WrapAlignment.center,
+                          children: _demos
+                              .map((d) => InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _transcript = d;
+                                        _state = 'done';
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        borderRadius:
+                                            BorderRadius.circular(16),
+                                        border: Border.all(
+                                            color: AppColors.borderLight),
+                                      ),
+                                      child: Text(
+                                        d,
+                                        style: AppTextStyles.bodySize(11,
+                                            color: AppColors.dark),
+                                      ),
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ],
                     ],
                   ),
                 ),
