@@ -352,7 +352,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           crossAxisCount: 2,
           mainAxisSpacing: 14,
           crossAxisSpacing: 14,
-          childAspectRatio: 0.55,
+          childAspectRatio: 0.50,
         ),
         itemBuilder: (_, i) {
           final p = results[i];
@@ -371,7 +371,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
         mainAxisSpacing: 14,
         crossAxisSpacing: 14,
-        childAspectRatio: 0.58,
+        childAspectRatio: 0.50,
         children: List.generate(
           6,
           (_) => const Column(

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../../core/constants/ar_constants.dart';
 import '../../core/data/mock_data.dart';
@@ -46,6 +47,8 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
   ArLaunchResult? _lastLaunch;
   WebViewController? _viewerController;
   Uint8List? _capture;
+  double _panX = 0.0;
+  double _panY = 0.0;
 
   late Product _product = widget.initialProduct ?? kProducts.first;
 
@@ -298,13 +301,13 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
                       ar: true,
                       arModes: const ['scene-viewer', 'webxr', 'quick-look'],
                       arScale: ArScale.auto,
-                      arPlacement: ArPlacement.floor,
                       cameraControls: true,
                       disableZoom: false,
                       disablePan: false,
-                      autoRotate: true,
-                      autoRotateDelay: 800,
-                      rotationPerSecond: '25deg',
+                      cameraTarget:
+                          '${_panX.toStringAsFixed(2)}m ${_panY.toStringAsFixed(2)}m auto',
+                      touchAction: TouchAction.none,
+                      autoRotate: false,
                       interactionPrompt: InteractionPrompt.auto,
                       backgroundColor: AppColors.dark,
                       debugLogging: false,
@@ -321,19 +324,59 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
             const Positioned(
               right: 12,
               top: 12,
-              child: _ViewerChip(icon: Icons.pinch, label: 'Escala libre'),
+              child: _ViewerChip(icon: Icons.pinch, label: 'Escala y mueve'),
+            ),
+            Positioned(
+              right: 12,
+              bottom: 44,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _panBtn(
+                        Icons.arrow_upward,
+                        () => setState(() => _panY -= 0.15)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _panBtn(
+                            Icons.arrow_back,
+                            () => setState(() => _panX += 0.15)),
+                        _panBtn(
+                            Icons.center_focus_strong,
+                            () => setState(() {
+                                  _panX = 0.0;
+                                  _panY = 0.0;
+                                })),
+                        _panBtn(
+                            Icons.arrow_forward,
+                            () => setState(() => _panX -= 0.15)),
+                      ],
+                    ),
+                    _panBtn(
+                        Icons.arrow_downward,
+                        () => setState(() => _panY += 0.15)),
+                  ],
+                ),
+              ),
             ),
             Positioned(
               left: 12,
-              right: 12,
+              right: 76,
               bottom: 12,
               child: _ViewerChip(
                 icon: _availability.ready
                     ? Icons.check_circle_outline
                     : Icons.info_outline,
                 label: _availability.ready
-                    ? 'ARCore disponible · escala y mueve con los dedos'
-                    : 'Sin ARCore: vista 3D interactiva',
+                    ? 'ARCore disponible · escala y mueve libremente'
+                    : 'Mueve con flechas o dos dedos',
               ),
             ),
           ],
@@ -434,6 +477,18 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
     s.setToast(result.message);
   }
 
+  Widget _panBtn(IconData icon, VoidCallback onTap) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Icon(icon, size: 16, color: Colors.white),
+          ),
+        ),
+      );
+
   /// Abre el probador con cámara frontal selfie (Espejo Virtual en vivo).
   Future<void> _openVirtualMirror(AppState s) async {
     final granted = await _ar.requestCameraPermission();
@@ -448,11 +503,18 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
         request.grant();
       },
     )
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(
-        Uri.parse(
-            'https://fashionstore-web-eight.vercel.app/fitting/${_product.id}'),
-      );
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+
+    if (controller.platform is AndroidWebViewController) {
+      final androidController =
+          controller.platform as AndroidWebViewController;
+      androidController.setMediaPlaybackRequiresUserGesture(false);
+    }
+
+    controller.loadRequest(
+      Uri.parse(
+          'https://fashionstore-web-eight.vercel.app/fitting/${_product.id}'),
+    );
 
     if (!mounted) return;
     showModalBottomSheet(

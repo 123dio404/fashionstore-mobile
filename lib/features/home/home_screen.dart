@@ -436,7 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 14,
-                  childAspectRatio: 0.58,
+                  childAspectRatio: 0.50,
                   children: List.generate(
                     4,
                     (_) => const Column(
@@ -471,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisCount: 2,
                         mainAxisSpacing: 14,
                         crossAxisSpacing: 14,
-                        childAspectRatio: 0.55,
+                        childAspectRatio: 0.50,
                       ),
                       itemBuilder: (_, i) {
                         final p = _filtered[i];
