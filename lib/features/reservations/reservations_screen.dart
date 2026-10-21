@@ -86,7 +86,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       status: 'confirmada',
       code: 'FS-${1000 + stamp % 9000}',
     );
-    s.addReservation(r);
+    final bId = int.tryParse(st.id) ?? (st.name.contains('Norte') ? 2 : (st.name.contains('Sur') ? 3 : 1));
+    s.addReservation(r, branchId: bId, variantId: p.id);
     s.addNotification(NotificationItem(
       id: 'res-${DateTime.now().millisecondsSinceEpoch}',
       title: 'Reserva confirmada en tienda',

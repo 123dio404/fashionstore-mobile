@@ -56,4 +56,35 @@ class AppRepository {
     return Map<String, dynamic>.from(
         (await dio.post(ApiConstants.analyticalQueryVoice, data: form)).data);
   }
+
+  // ── MÓDULO PARCIAL 2: CAMBIO DE PRENDAS Y RESERVAS ──
+  Future<Map<String, dynamic>> createExchange({
+    required int branchId,
+    required int originalSaleId,
+    required int returnedVariantId,
+    required int newVariantId,
+    required String reason,
+  }) async =>
+      Map<String, dynamic>.from((await dio.post(ApiConstants.exchanges, data: {
+        'branch_id': branchId,
+        'original_sale_id': originalSaleId,
+        'returned_variant_id': returnedVariantId,
+        'new_variant_id': newVariantId,
+        'reason': reason,
+      })).data);
+
+  Future<List<dynamic>> listExchanges({int? branchId}) async {
+    final res = await dio.get(ApiConstants.exchanges, queryParameters: {
+      if (branchId != null) 'branch_id': branchId,
+    });
+    return List<dynamic>.from(res.data);
+  }
+
+  Future<Map<String, dynamic>> cancelReservation(int reservationId) async =>
+      Map<String, dynamic>.from(
+          (await dio.post('/commerce/reservations/$reservationId/cancel')).data);
+
+  Future<Map<String, dynamic>> completeReservation(int reservationId) async =>
+      Map<String, dynamic>.from(
+          (await dio.post('/commerce/reservations/$reservationId/complete')).data);
 }

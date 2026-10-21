@@ -244,6 +244,15 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                       onPressed: () => AppScope.read(context)
                           .setToast('Tu pedido ${p.id} está en camino'),
                     ),
+                    const SizedBox(height: 8),
+                    DButton(
+                      label: 'Solicitar cambio de prenda (máx. 30 días)',
+                      icon: Icons.swap_horiz,
+                      tone: DButtonTone.dark,
+                      expanded: true,
+                      size: DButtonSize.sm,
+                      onPressed: () => _showExchangeDialog(context, p),
+                    ),
                   ],
                 ],
               ),
@@ -251,6 +260,181 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  void _showExchangeDialog(BuildContext context, Purchase p) {
+    final s = AppScope.read(context);
+    PurchaseItem? selectedReturned = p.items.isNotEmpty ? p.items.first : null;
+    Product? selectedNew = s.products.isNotEmpty ? s.products.first : null;
+    const reason = 'Cambio por talle o modelo (política 30 días)';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final oldPrice = selectedReturned?.price ?? 0.0;
+            final newPrice = selectedNew?.price ?? 0.0;
+            final diff = newPrice - oldPrice;
+
+            return Container(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.swap_horiz, color: AppColors.accent, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Cambio de Prenda (RN-02)',
+                              style: AppTextStyles.bodySize(16, weight: FontWeight.w700),
+                            ),
+                            Text(
+                              'Orden: ${p.id} · Plazo máx. 30 días',
+                              style: AppTextStyles.bodySize(11, color: AppColors.muted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Prenda a devolver:', style: AppTextStyles.bodySize(12, weight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<PurchaseItem>(
+                    initialValue: selectedReturned,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.borderLight),
+                      ),
+                    ),
+                    items: p.items.map((it) {
+                      return DropdownMenuItem(
+                        value: it,
+                        child: Text('${it.name} (${it.size}) - Bs. ${it.price.toStringAsFixed(2)}'),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedReturned = val);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Text('Nueva prenda por la que cambia:', style: AppTextStyles.bodySize(12, weight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<Product>(
+                    initialValue: selectedNew,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.borderLight),
+                      ),
+                    ),
+                    items: s.products.map((prod) {
+                      return DropdownMenuItem(
+                        value: prod,
+                        child: Text('${prod.name} - Bs. ${prod.price.toStringAsFixed(2)}'),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedNew = val);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: diff > 0
+                          ? AppColors.accent.withValues(alpha: 0.1)
+                          : (diff < 0 ? AppColors.successBg : AppColors.background),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Ajuste de precio:', style: AppTextStyles.bodySize(13, weight: FontWeight.w600)),
+                        Text(
+                          diff > 0
+                              ? '+ Bs. ${diff.toStringAsFixed(2)} (Abonar)'
+                              : (diff < 0 ? '- Bs. ${(-diff).toStringAsFixed(2)} (A favor)' : 'Bs. 0.00'),
+                          style: AppTextStyles.bodySize(
+                            13,
+                            weight: FontWeight.w800,
+                            color: diff > 0 ? AppColors.accent : (diff < 0 ? AppColors.success : AppColors.dark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  DButton(
+                    label: 'Confirmar y generar comprobante',
+                    tone: DButtonTone.dark,
+                    expanded: true,
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final rawId = p.id.replaceAll(RegExp(r'[^0-9]'), '');
+                      final saleId = int.tryParse(rawId) ?? 1;
+                      final branchId = p.store?.toLowerCase().contains('norte') == true
+                          ? 2
+                          : (p.store?.toLowerCase().contains('sur') == true ? 3 : 1);
+
+                      try {
+                        await s.createExchange(
+                          branchId: branchId,
+                          originalSaleId: saleId,
+                          returnedVariantId: selectedReturned?.productId ?? 1,
+                          newVariantId: selectedNew?.id ?? 1,
+                          reason: reason,
+                        );
+                      } catch (e) {
+                        s.setToast('Error al procesar cambio: $e');
+                      }
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

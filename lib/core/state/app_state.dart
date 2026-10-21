@@ -2,18 +2,23 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../features/app_repository.dart';
 import '../../features/auth/data/models/auth_models.dart';
 import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/catalog/data/models/catalog_models.dart';
 import '../../features/commerce/data/commerce_repository.dart';
 import '../data/mock_data.dart';
 import '../models/fashion_models.dart';
+import '../services/sync_manager.dart';
 
 /// Estado global de la app móvil (espejo de `App.tsx` del prototipo).
 class AppState extends ChangeNotifier {
   AppPhase phase = AppPhase.splash;
   AppTab tab = AppTab.home;
   OverlayScreen overlay = OverlayScreen.none;
+
+  final SyncManager syncManager = SyncManager.instance;
+  final AppRepository _appRepo = AppRepository();
 
   final List<CartItem> _cart = [];
   final List<int> _favs = [];
@@ -40,9 +45,21 @@ class AppState extends ChangeNotifier {
   String? _toast;
   Timer? _toastTimer;
 
+  AppState() {
+    syncManager.isOnline.addListener(() {
+      _isOffline = !syncManager.isOnline.value;
+      notifyListeners();
+    });
+    syncManager.pendingCount.addListener(notifyListeners);
+    syncManager.isSyncing.addListener(notifyListeners);
+  }
+
   @override
   void dispose() {
     _toastTimer?.cancel();
+    syncManager.isOnline.removeListener(notifyListeners);
+    syncManager.pendingCount.removeListener(notifyListeners);
+    syncManager.isSyncing.removeListener(notifyListeners);
     super.dispose();
   }
 
@@ -164,7 +181,7 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
   }
 
-  void completePurchase(Purchase p) {
+  Future<void> completePurchase(Purchase p, {int? branchId}) async {
     _purchases.insert(0, p);
     _cart.clear();
     _lastPurchase = p;
@@ -185,9 +202,28 @@ class AppState extends ChangeNotifier {
       return prod.copyWith(stock: newStock);
     }).toList();
 
-    // Sincronizar stock y ventas actualizadas con el backend
-    unawaited(refreshStockFromRemote().catchError((_) {}));
-    unawaited(syncRemoteSales().catchError((_) {}));
+    final targetBranchId =
+        branchId ?? (branchKey == 'Norte' ? 2 : (branchKey == 'Sur' ? 3 : 1));
+    final saleItems = p.items
+        .map((it) => {
+              'stock_id': it.productId,
+              'quantity': it.qty,
+              'unit_price': it.price,
+            })
+        .toList();
+
+    if (_isOffline) {
+      final uuid = await syncManager.recordOfflineSale(
+        branchId: targetBranchId,
+        clientId: _currentUser?.id,
+        items: saleItems,
+        total: p.total,
+      );
+      setToast('Venta guardada offline (UUID: ${uuid.substring(0, 8)})');
+    } else {
+      unawaited(refreshStockFromRemote().catchError((_) {}));
+      unawaited(syncRemoteSales().catchError((_) {}));
+    }
 
     notifyListeners();
   }
@@ -304,16 +340,63 @@ class AppState extends ChangeNotifier {
 
   double get cartSubtotal => _cart.fold(0, (sum, i) => sum + i.price * i.qty);
 
-  void addReservation(Reservation r) {
+  Future<void> addReservation(Reservation r, {int? branchId, int? variantId}) async {
     _reservations.insert(0, r);
+    if (_isOffline) {
+      final bId = branchId ?? 1;
+      final vId = variantId ?? r.productId;
+      final uuid = await syncManager.recordOfflineReservation(
+        branchId: bId,
+        variantId: vId,
+        date: r.date,
+        time: r.time,
+      );
+      setToast('Reserva guardada offline (UUID: ${uuid.substring(0, 8)})');
+    }
     notifyListeners();
   }
 
-  void cancelReservation(String id) {
+  Future<void> cancelReservation(String id) async {
     _reservations = _reservations
         .map((r) => r.id == id ? r.copyWith(status: 'cancelada') : r)
         .toList();
     notifyListeners();
+
+    final numStr = id.replaceAll(RegExp(r'[^0-9]'), '');
+    final numId = int.tryParse(numStr);
+    if (numId != null && !_isOffline) {
+      try {
+        await _appRepo.cancelReservation(numId);
+      } catch (_) {}
+    }
+  }
+
+  Future<Map<String, dynamic>> createExchange({
+    required int branchId,
+    required int originalSaleId,
+    required int returnedVariantId,
+    required int newVariantId,
+    required String reason,
+  }) async {
+    final res = await _appRepo.createExchange(
+      branchId: branchId,
+      originalSaleId: originalSaleId,
+      returnedVariantId: returnedVariantId,
+      newVariantId: newVariantId,
+      reason: reason,
+    );
+    final voucher = res['voucher_number'] ?? 'VOUCHER';
+    final diff = res['price_difference'] ?? 0;
+    addNotification(NotificationItem(
+      id: 'exchange-${DateTime.now().millisecondsSinceEpoch}',
+      title: '¡Cambio de prenda procesado!',
+      message: 'Comprobante: $voucher. Diferencia ajustada: Bs. $diff (política máx. 30 días).',
+      date: 'Hoy',
+      type: 'purchase_success',
+    ));
+    setToast('Cambio procesado con éxito ($voucher)');
+    notifyListeners();
+    return res;
   }
 
   void updatePrefs(UserPreferences p) {

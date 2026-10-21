@@ -29,4 +29,10 @@ class ApiConstants {
   static const promotions = '/promotions';
   static const purchaseHistory = '/reports/purchases/history';
   static const analyticalQueryVoice = '/reports/analytical-query/voice';
+  static const syncBatch = '/sync/batch';
+  static const exchanges = '/commerce/exchanges';
+  static const saasSubscription = '/saas/subscription';
+  static const mlDemand = '/ml/demand';
+  static const mlSegments = '/ml/segments';
+  static const aiReport = '/ai/reports/generate';
 }

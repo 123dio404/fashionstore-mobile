@@ -85,27 +85,82 @@ class _BackButton extends StatelessWidget {
   }
 }
 
-/// Franja negra de modo offline.
+/// Franja interactiva de estado offline y sincronización SQLite (RN-03, RN-04, RNF05).
 class OfflineBanner extends StatelessWidget {
   const OfflineBanner({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final s = AppScope.of(context);
+    final count = s.syncManager.pendingCount.value;
+    final syncing = s.syncManager.isSyncing.value;
+
     return Container(
       color: AppColors.dark,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           const Icon(Icons.wifi_off, size: 14, color: AppColors.mutedLight),
           const SizedBox(width: 8),
-          Text(
-            'Sin conexión — Mostrando datos guardados',
-            style: AppTextStyles.bodySize(
-              12,
-              color: const Color(0xFFD1D5DB),
-              weight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              'Modo Offline activo (SQLite)',
+              style: AppTextStyles.bodySize(
+                12,
+                color: const Color(0xFFD1D5DB),
+                weight: FontWeight.w500,
+              ),
             ),
           ),
+          if (count > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.accent.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.accent, width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$count pendientes',
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  if (syncing)
+                    const SizedBox(
+                      width: 10,
+                      height: 10,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: AppColors.accent,
+                      ),
+                    )
+                  else
+                    InkWell(
+                      onTap: () async {
+                        final res = await s.syncManager.syncAll();
+                        if (res != null) {
+                          s.setToast(
+                            'Sincronizado: ${res.confirmadas} confirmadas',
+                          );
+                        }
+                      },
+                      child: const Icon(
+                        Icons.sync,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

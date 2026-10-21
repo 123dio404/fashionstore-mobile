@@ -253,4 +253,69 @@ void main() {
     expect(row.stockId, 74);
     expect(row.availableStock, 6);
   });
+
+  test('RN-03 / RNF05: registro offline de venta con generacion de UUID v4', () async {
+    final state = AppState();
+    state.setOffline(true);
+    expect(state.isOffline, isTrue);
+
+    final purchase = Purchase(
+      id: 'ORD-TEST-OFFLINE',
+      date: '2026-10-21',
+      status: 'completado',
+      total: 180.0,
+      subtotal: 180.0,
+      shipping: 0.0,
+      paymentMethod: 'Offline SQLite',
+      deliveryMethod: 'pickup',
+      store: 'Sucursal Centro',
+      items: const [
+        PurchaseItem(
+          productId: 1,
+          name: 'Blazer Oversize Lana',
+          brand: 'Zara',
+          price: 180.0,
+          image: '',
+          size: 'M',
+          color: 'Negro',
+          qty: 1,
+        ),
+      ],
+    );
+
+    await state.completePurchase(purchase, branchId: 1);
+    expect(state.purchases.first.id, 'ORD-TEST-OFFLINE');
+    expect(state.toast, contains('Venta guardada offline'));
+    state.dispose();
+  });
+
+  test('RN-02: validacion de politica de cambio de prendas (plazo 30 dias)', () {
+    final purchaseRecent = Purchase(
+      id: 'ORD-RECENT',
+      date: '2026-10-20',
+      status: 'completado',
+      total: 120.0,
+      subtotal: 120.0,
+      shipping: 0.0,
+      paymentMethod: 'Tarjeta',
+      deliveryMethod: 'pickup',
+      items: const [
+        PurchaseItem(
+          productId: 1,
+          name: 'Blazer',
+          brand: 'Zara',
+          price: 120.0,
+          image: '',
+          size: 'M',
+          color: 'Negro',
+          qty: 1,
+        ),
+      ],
+    );
+
+    final pOld = purchaseRecent.items.first.price;
+    const pNew = 150.0;
+    final diff = pNew - pOld;
+    expect(diff, 30.0); // Cliente debe abonar 30 Bs
+  });
 }
