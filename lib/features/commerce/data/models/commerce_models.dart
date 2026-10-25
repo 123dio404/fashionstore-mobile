@@ -11,6 +11,8 @@ class ApiCartItem {
   final double price;
   final String productName;
   final String? size, color;
+  final bool? isWholesaleApplied;
+  final int? wholesaleMinQty;
 
   const ApiCartItem({
     required this.id,
@@ -20,6 +22,8 @@ class ApiCartItem {
     required this.productName,
     this.size,
     this.color,
+    this.isWholesaleApplied,
+    this.wholesaleMinQty,
   });
 
   factory ApiCartItem.fromJson(Map<String, dynamic> j) => ApiCartItem(
@@ -30,6 +34,8 @@ class ApiCartItem {
         productName: '${j['product_name'] ?? ''}',
         size: j['size']?.toString(),
         color: j['color']?.toString(),
+        isWholesaleApplied: j['is_wholesale_applied'] as bool?,
+        wholesaleMinQty: j['wholesale_min_qty'] == null ? null : asInt(j['wholesale_min_qty']),
       );
 }
 
@@ -55,6 +61,8 @@ class ApiSale {
   final int id, branchId, clientId;
   final double total;
   final String saleType;
+  final String deliveryStatus;
+  final String? customerNotes, deliveredAt;
   final List<ApiPayment> payments;
 
   const ApiSale({
@@ -63,6 +71,9 @@ class ApiSale {
     required this.clientId,
     required this.total,
     required this.saleType,
+    this.deliveryStatus = 'PAGADO',
+    this.customerNotes,
+    this.deliveredAt,
     this.payments = const [],
   });
 
@@ -76,6 +87,9 @@ class ApiSale {
         clientId: asInt(j['client_id']),
         total: asDouble(j['total']),
         saleType: '${j['sale_type'] ?? ''}',
+        deliveryStatus: '${j['delivery_status'] ?? 'PAGADO'}',
+        customerNotes: j['customer_notes']?.toString(),
+        deliveredAt: j['delivered_at']?.toString(),
         payments: ((j['payments'] as List?) ?? [])
             .whereType<Map>()
             .map((e) => ApiPayment.fromJson(Map<String, dynamic>.from(e)))

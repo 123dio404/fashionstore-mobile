@@ -25,8 +25,14 @@ class ProductResponse {
   final String name, sku;
   final String? description, technicalMetadata, model3dUrl;
   final double price;
+  final double? wholesalePrice;
+  final int? wholesaleMinQuantity;
+  final String? material, secondaryColor;
+  final bool isClearance;
+  final double? discountPercentage;
   final bool isActive;
   final List<VariantResponse> variants;
+
   const ProductResponse(
       {required this.id,
       required this.categoryId,
@@ -37,8 +43,15 @@ class ProductResponse {
       this.technicalMetadata,
       this.model3dUrl,
       required this.price,
+      this.wholesalePrice,
+      this.wholesaleMinQuantity,
+      this.material,
+      this.secondaryColor,
+      this.isClearance = false,
+      this.discountPercentage,
       required this.isActive,
       required this.variants});
+
   factory ProductResponse.fromJson(Map<String, dynamic> j) => ProductResponse(
       id: asInt(j['id']),
       categoryId: asInt(j['category_id']),
@@ -49,6 +62,12 @@ class ProductResponse {
       technicalMetadata: j['technical_metadata']?.toString(),
       model3dUrl: j['model_3d_url']?.toString(),
       price: asDouble(j['price']),
+      wholesalePrice: j['wholesale_price'] == null ? null : asDouble(j['wholesale_price']),
+      wholesaleMinQuantity: j['wholesale_min_quantity'] == null ? null : asInt(j['wholesale_min_quantity']),
+      material: j['material']?.toString(),
+      secondaryColor: j['secondary_color']?.toString(),
+      isClearance: j['is_clearance'] as bool? ?? false,
+      discountPercentage: j['discount_percentage'] == null ? null : asDouble(j['discount_percentage']),
       isActive: j['is_active'] as bool? ?? true,
       variants: ((j['variants'] as List?) ?? [])
           .whereType<Map>()
