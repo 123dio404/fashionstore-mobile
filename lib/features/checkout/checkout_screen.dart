@@ -621,93 +621,118 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     double finalTotal = total;
     double finalSubtotal = s.cartSubtotal;
     String? pdfPath;
+    int? remoteBranchId;
     final missing = <String>[];
 
-    try {
-      final branches = await _catalog.branches().timeout(const Duration(seconds: 4));
-      final wanted = _store.id.toLowerCase();
-      final branch = branches.firstWhere(
-        (candidate) => candidate.name.toLowerCase().contains(wanted),
-        orElse: () => branches.first,
-      );
-
-      _setProgress('Leyendo el catálogo…');
-      final products = await _catalog.products().timeout(const Duration(seconds: 4));
-
-      for (final item in s.cart) {
-        _setProgress('Reservando stock: ${item.name}…');
-        final product = _matchProduct(products, item.name);
-        if (product == null) {
-          missing.add('${item.name} (no está en el catálogo)');
-          continue;
-        }
-        final rows = await _catalog.availability(product.id, branch.id).timeout(const Duration(seconds: 4));
-        final free = _freeStock(rows, item.qty);
-        if (free == null) {
-          missing.add('${item.name} (sin stock en la sucursal)');
-          continue;
-        }
-        final quantity = item.qty > free.availableStock ? free.availableStock : item.qty;
-        await _commerce.addItem(free.stockId, quantity).timeout(const Duration(seconds: 4));
-      }
-
-      _setProgress('Procesando pago con la pasarela Stripe…');
-      final provider = isCash ? 'efectivo' : (isQr ? 'stripe_qr' : 'stripe');
-      final cardToken = isCard ? selectedCard.$4 : null;
-
-      final sale = await _commerce.checkout(
-        branchId: branch.id,
-        provider: provider,
-        cardToken: cardToken,
-        simulateRejection: false,
-      ).timeout(const Duration(seconds: 6));
-
-      saleId = sale.id;
-      transactionRef = sale.reference ?? (isCash ? 'CASH-${sale.id}' : 'STRIPE-OK-${sale.id}');
-
-      _setProgress('Emitiendo factura oficial electrónica…');
+    // Sin conexión no se intenta contactar la pasarela ni el catálogo: la venta
+    // se registra localmente con el `stock_id` resuelto desde la caché SQLite.
+    if (!s.isOffline) {
       try {
-        final invoice = await _commerce.invoice(sale.id).timeout(const Duration(seconds: 4));
-        invoiceNumber = invoice.invoiceNumber;
-        finalTotal = invoice.total;
-        finalSubtotal = invoice.subtotal;
-        pdfPath = await _saveInvoice(sale.id, await _commerce.invoicePdf(sale.id));
-      } catch (_) {
-        invoiceNumber = 'FAC-${sale.id.toString().padLeft(12, '0')}';
+        final branches = await _catalog.branches().timeout(const Duration(seconds: 4));
+        final wanted = _store.id.toLowerCase();
+        final branch = branches.firstWhere(
+          (candidate) => candidate.name.toLowerCase().contains(wanted),
+          orElse: () => branches.first,
+        );
+        remoteBranchId = branch.id;
+
+        _setProgress('Leyendo el catálogo…');
+        final products = await _catalog.products().timeout(const Duration(seconds: 4));
+
+        for (final item in s.cart) {
+          _setProgress('Reservando stock: ${item.name}…');
+          final product = _matchProduct(products, item.name);
+          if (product == null) {
+            missing.add('${item.name} (no está en el catálogo)');
+            continue;
+          }
+          final rows = await _catalog.availability(product.id, branch.id).timeout(const Duration(seconds: 4));
+          final free = _freeStock(rows, item.qty);
+          if (free == null) {
+            missing.add('${item.name} (sin stock en la sucursal)');
+            continue;
+          }
+          final quantity = item.qty > free.availableStock ? free.availableStock : item.qty;
+          await _commerce.addItem(free.stockId, quantity).timeout(const Duration(seconds: 4));
+        }
+
+        _setProgress('Procesando pago con la pasarela Stripe…');
+        final provider = isCash ? 'efectivo' : (isQr ? 'stripe_qr' : 'stripe');
+        final cardToken = isCard ? selectedCard.$4 : null;
+
+        final sale = await _commerce.checkout(
+          branchId: branch.id,
+          provider: provider,
+          cardToken: cardToken,
+          simulateRejection: false,
+        ).timeout(const Duration(seconds: 6));
+
+        saleId = sale.id;
+        transactionRef = sale.reference ?? (isCash ? 'CASH-${sale.id}' : 'STRIPE-OK-${sale.id}');
+
+        _setProgress('Emitiendo factura oficial electrónica…');
+        try {
+          final invoice = await _commerce.invoice(sale.id).timeout(const Duration(seconds: 4));
+          invoiceNumber = invoice.invoiceNumber;
+          finalTotal = invoice.total;
+          finalSubtotal = invoice.subtotal;
+          pdfPath = await _saveInvoice(sale.id, await _commerce.invoicePdf(sale.id));
+        } catch (_) {
+          invoiceNumber = 'FAC-${sale.id.toString().padLeft(12, '0')}';
+        }
+      } catch (e) {
+        debugPrint('Checkout remoto no disponible (${_describe(e)}), usando procesamiento local.');
       }
-    } catch (e) {
-      debugPrint('Checkout remoto no disponible (${_describe(e)}), usando procesamiento local.');
+    } else {
+      _setProgress('Guardando la venta sin conexión…');
     }
 
     if (!mounted) return;
 
+    if (missing.isNotEmpty) {
+      debugPrint('Artículos sin stock remoto: ${missing.join(', ')}');
+    }
+
     // Completar el pedido con datos confirmados (remotos o simulados)
     final idNum = saleId ?? (1000 + DateTime.now().millisecondsSinceEpoch % 9000);
     final orderId = 'ORD-$idNum';
+    final pendingSync = saleId == null;
     invoiceNumber ??= 'FAC-${DateTime.now().millisecondsSinceEpoch.toString().padLeft(12, '0')}';
-    transactionRef ??= isCash ? 'CASH-$idNum' : (isQr ? 'STRIPE-QR-$idNum' : 'STRIPE-TX-$idNum');
+    transactionRef ??= pendingSync
+        ? 'OFFLINE-$idNum'
+        : (isCash ? 'CASH-$idNum' : (isQr ? 'STRIPE-QR-$idNum' : 'STRIPE-TX-$idNum'));
 
     final purchase = Purchase(
       id: orderId,
       date: _fmtDate(DateTime.now()),
-      status: 'completado',
+      status: pendingSync ? 'pendiente_sync' : 'completado',
       total: finalTotal,
       subtotal: finalSubtotal,
       shipping: shipping,
-      paymentMethod: 'Aprobado · $transactionRef',
+      paymentMethod:
+          pendingSync ? '$method · pendiente de sincronizar' : 'Aprobado · $transactionRef',
       deliveryMethod: delivery,
       store: delivery == 'pickup' ? storeName : null,
       items: items,
+      pendingSync: pendingSync,
     );
-    s.completePurchase(purchase);
+    await s.completePurchase(
+      purchase,
+      branchId: remoteBranchId ?? s.resolveBranchId(storeName),
+      remoteCompleted: !pendingSync,
+    );
 
     // Despacha notificación de compra confirmada a la app móvil
     s.addNotification(NotificationItem(
       id: 'succ-${DateTime.now().millisecondsSinceEpoch}',
-      title: '¡Compra confirmada! Factura $invoiceNumber',
-      message: 'Tu pago de \$${finalTotal.toStringAsFixed(2)} mediante $method fue validado exitosamente. Ref: $transactionRef.',
+      title: pendingSync
+          ? 'Compra guardada sin conexión'
+          : '¡Compra confirmada! Factura $invoiceNumber',
+      message: pendingSync
+          ? 'Tu compra de \$${finalTotal.toStringAsFixed(2)} mediante $method quedó guardada en el dispositivo y se sincronizará automáticamente al recuperar conexión. Ref: $transactionRef.'
+          : 'Tu pago de \$${finalTotal.toStringAsFixed(2)} mediante $method fue validado exitosamente. Ref: $transactionRef.',
       date: _fmtDate(DateTime.now()),
-      type: 'purchase_success',
+      type: pendingSync ? 'purchase_offline' : 'purchase_success',
       saleId: saleId ?? idNum,
       amount: finalTotal,
       transactionRef: transactionRef,
@@ -720,10 +745,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _payProgress = '';
     });
 
-    s.setToast(
-      '$invoiceNumber · \$${finalTotal.toStringAsFixed(2)} · Aprobado'
-      '${pdfPath != null ? ' · PDF guardado' : ''}',
-    );
+    if (!pendingSync) {
+      s.setToast(
+        '$invoiceNumber · \$${finalTotal.toStringAsFixed(2)} · Aprobado'
+        '${pdfPath != null ? ' · PDF guardado' : ''}',
+      );
+    }
 
     s.openOverlay(OverlayScreen.purchaseSuccess);
   }

@@ -43,15 +43,6 @@ class _CartScreenState extends State<CartScreen> {
     final discount = _couponApplied ? subtotal * 0.1 : 0.0;
     final total = subtotal + shipping - discount;
 
-    if (s.isOffline) {
-      return Column(
-        children: [
-          const AppTopBar(title: 'Mi Carrito', subtitle: 'FashionStore'),
-          OfflineState(onRetry: () => s.setOffline(false)),
-        ],
-      );
-    }
-
     return Column(
       children: [
         const AppTopBar(

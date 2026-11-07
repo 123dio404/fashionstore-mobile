@@ -39,14 +39,20 @@ class PurchaseSuccessScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: const Icon(Icons.check, size: 34, color: AppColors.success),
+                child: Icon(
+                  p.pendingSync ? Icons.cloud_off_outlined : Icons.check,
+                  size: 34,
+                  color: p.pendingSync ? AppColors.accent : AppColors.success,
+                ),
               ),
               const SizedBox(height: 16),
-              Text('¡Compra exitosa!',
+              Text(p.pendingSync ? 'Compra guardada offline' : '¡Compra exitosa!',
                   style: AppTextStyles.displaySize(26, color: Colors.white)),
               const SizedBox(height: 6),
               Text(
-                'Tu orden ha sido confirmada',
+                p.pendingSync
+                    ? 'Se sincronizará al recuperar conexión'
+                    : 'Tu orden ha sido confirmada',
                 style: AppTextStyles.bodySize(13,
                     color: Colors.white.withValues(alpha: 0.65)),
               ),
@@ -76,8 +82,51 @@ class PurchaseSuccessScreen extends StatelessWidget {
                 _row('Fecha', p.date),
                 _row('Total pagado', '\$${p.total.toStringAsFixed(2)}'),
                 _row('Método de pago', p.paymentMethod),
-                _row('Estado', 'Procesando', success: true),
+                _row(
+                  'Estado',
+                  p.pendingSync ? 'Pendiente de sincronizar' : 'Procesando',
+                  success: !p.pendingSync,
+                ),
               ]),
+              if (p.pendingSync)
+                _card([
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.sync,
+                          size: 20,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Venta registrada en el dispositivo',
+                              style: AppTextStyles.bodySize(13,
+                                  weight: FontWeight.w700),
+                            ),
+                            Text(
+                              'La factura oficial y el descuento de stock se procesarán cuando vuelvas a estar en línea.',
+                              style: AppTextStyles.bodySize(11,
+                                  color: AppColors.muted),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ]),
               _card([
                 Row(
                   children: [

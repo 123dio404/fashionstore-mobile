@@ -42,14 +42,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
-    if (s.isOffline) {
-      return Column(
-        children: [
-          const AppTopBar(title: 'Mi Perfil', subtitle: 'FashionStore'),
-          OfflineState(onRetry: () => s.setOffline(false)),
-        ],
-      );
-    }
     return Column(
       children: [
         AppTopBar(
@@ -215,8 +207,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Marcas, colores y tallas', () => s.openOverlay(OverlayScreen.preferences)),
             _menuItem(Icons.settings_outlined, 'Configuración',
                 'Tema, idioma y cuenta', () => s.openOverlay(OverlayScreen.settings)),
+            _menuItem(Icons.sync, 'Cola de sincronización',
+                'Ventas y reservas guardadas offline',
+                () => s.openOverlay(OverlayScreen.syncQueue)),
             _menuItem(Icons.auto_awesome, 'Recomendaciones IA',
                 'Sugerencias según tu estilo', () => s.openOverlay(OverlayScreen.aiRecs)),
+            if (s.currentUser?.role == Role.administrador)
+              _menuItem(Icons.insights_outlined, 'Reporte analítico IA',
+                  'Consultas en texto o voz (CU-20)',
+                  () => s.openOverlay(OverlayScreen.aiReport)),
             _menuItem(Icons.chat_bubble_outline, 'Asistente FashionStore',
                 'Resuelve tus dudas', () => s.openOverlay(OverlayScreen.chatbot)),
             _menuItem(Icons.mic_none, 'Búsqueda por voz',

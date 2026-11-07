@@ -12,6 +12,7 @@ class ApiConstants {
   static const products = '/products';
   static const branches = '/branches';
   static const cities = '/cities';
+  static const sizes = '/products/parameters/sizes';
   static const availability = '/availability';
   static const transfers = '/inventory/transfers';
   // CU10 / CU11 / CU12 — carrito, checkout y ventas viven bajo el router `/commerce`.
@@ -34,5 +35,6 @@ class ApiConstants {
   static const saasSubscription = '/saas/subscription';
   static const mlDemand = '/ml/demand';
   static const mlSegments = '/ml/segments';
-  static const aiReport = '/ai/reports/generate';
+  // CU20 — reporte analítico asistido por IA (texto/voz).
+  static const aiReport = '/ai-reports/query';
 }

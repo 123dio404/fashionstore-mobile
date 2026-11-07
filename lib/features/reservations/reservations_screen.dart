@@ -65,15 +65,54 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         _created = null;
       });
 
-  void _confirm(AppState s) {
+  bool _confirming = false;
+
+  Future<void> _confirm(AppState s) async {
     final p = _product;
     final st = _store;
-    if (p == null || st == null || _date.isEmpty || _time.isEmpty || _size.isEmpty) {
+    if (p == null ||
+        st == null ||
+        _date.isEmpty ||
+        _time.isEmpty ||
+        _size.isEmpty ||
+        _confirming) {
       return;
     }
+
+    final branchId = s.resolveBranchId(st.name);
+    var stockId = s.resolveStockId(
+      productName: p.name,
+      size: _size,
+      branchId: branchId,
+    );
+    if (!s.isOffline && stockId == null) {
+      // Sin instantánea local (primer arranque): refrescar y reintentar.
+      await s.refreshStockFromRemote();
+      stockId = s.resolveStockId(
+        productName: p.name,
+        size: _size,
+        branchId: branchId,
+      );
+    }
+    final scheduledAt = AppState.reservationSlot(_date, _time);
     final stamp = DateTime.now().millisecondsSinceEpoch;
+
+    setState(() => _confirming = true);
+
+    // Intento online: crea la reserva contra el backend con el stock real.
+    Map<String, dynamic>? remote;
+    if (!s.isOffline && stockId != null) {
+      remote = await s.createReservationRemote(
+        branchId: branchId,
+        stockId: stockId,
+        scheduledAt: scheduledAt,
+      );
+    }
+
+    final serverId = (remote?['id'] as num?)?.toInt();
+    final serverStatus = remote?['status']?.toString();
     final r = Reservation(
-      id: 'RES-${stamp % 100000}',
+      id: serverId != null ? 'RES-$serverId' : 'RES-${stamp % 100000}',
       productId: p.id,
       productName: p.name,
       productImage: p.image,
@@ -83,23 +122,38 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       date: _date,
       time: _time,
       store: st.name,
-      status: 'confirmada',
+      status: serverStatus ?? 'confirmada',
       code: 'FS-${1000 + stamp % 9000}',
     );
-    final bId = int.tryParse(st.id) ?? (st.name.contains('Norte') ? 2 : (st.name.contains('Sur') ? 3 : 1));
-    s.addReservation(r, branchId: bId, variantId: p.id);
+
+    if (remote == null) {
+      // Sin red (o sin asociación de stock): queda en la cola SQLite.
+      await s.addReservation(
+        r,
+        branchId: branchId,
+        stockId: stockId,
+        price: p.price,
+        scheduledAt: scheduledAt,
+      );
+    } else {
+      s.setToast('Reserva ${r.code} confirmada');
+    }
+
     s.addNotification(NotificationItem(
       id: 'res-${DateTime.now().millisecondsSinceEpoch}',
       title: 'Reserva confirmada en tienda',
-      message: 'Tu reserva para "${p.name}" ($_size) en ${st.name} el $_date a las $_time ha sido confirmada. Código de retiro: ${r.code}.',
+      message:
+          'Tu reserva para "${p.name}" ($_size) en ${st.name} el $_date a las $_time ha sido confirmada. Código de retiro: ${r.code}.',
       date: 'Hoy',
       type: 'reservation',
       transactionRef: r.code,
     ));
-    s.setToast('Reserva ${r.code} confirmada');
+
+    if (!mounted) return;
     setState(() {
       _created = r;
       _step = 'done';
+      _confirming = false;
     });
   }
 
@@ -114,14 +168,6 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   @override
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
-    if (s.isOffline) {
-      return Column(
-        children: [
-          const AppTopBar(title: 'Mis Reservas', subtitle: 'FashionStore'),
-          OfflineState(onRetry: () => s.setOffline(false)),
-        ],
-      );
-    }
     return Stack(
       children: [
         Column(
@@ -540,11 +586,11 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         ),
         const SizedBox(height: 24),
         DButton(
-          label: 'Confirmar reserva',
+          label: _confirming ? 'Confirmando…' : 'Confirmar reserva',
           tone: DButtonTone.dark,
           expanded: true,
           size: DButtonSize.lg,
-          onPressed: ready ? () => _confirm(s) : null,
+          onPressed: ready && !_confirming ? () => _confirm(s) : null,
         ),
       ],
     );

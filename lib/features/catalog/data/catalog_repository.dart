@@ -42,4 +42,14 @@ class CatalogRepository {
         .map((item) => item as Map<String, dynamic>)
         .toList();
   }
+
+  /// Catálogo de tallas (`GET /products/parameters/sizes`), usado para mapear
+  /// `size_id` de una variante al nombre que ve el cliente (S/M/L/38…).
+  Future<List<Map<String, dynamic>>> sizes() async {
+    final response = await _dio.get(ApiConstants.sizes);
+    return (response.data as List<dynamic>)
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
 }

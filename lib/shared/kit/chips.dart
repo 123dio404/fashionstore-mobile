@@ -137,7 +137,7 @@ class ToneBadge extends StatelessWidget {
 ToneBadge badgeForStatus(String status) {
   final tone = switch (status) {
     'confirmada' || 'entregado' => BadgeTone.success,
-    'pendiente' || 'procesando' => BadgeTone.warning,
+    'pendiente' || 'procesando' || 'pendiente_sync' => BadgeTone.warning,
     'cancelada' || 'cancelado' => BadgeTone.danger,
     'en_camino' => BadgeTone.info,
     'completada' => BadgeTone.neutral,
@@ -145,6 +145,7 @@ ToneBadge badgeForStatus(String status) {
   };
   final label = switch (status) {
     'en_camino' => 'En camino',
+    'pendiente_sync' => 'Pendiente de sync',
     _ => status[0].toUpperCase() + status.substring(1),
   };
   return ToneBadge(label: label, tone: tone);

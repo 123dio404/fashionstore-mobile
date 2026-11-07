@@ -33,7 +33,7 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         // Cola de transacciones offline (ventas y reservas pendientes de sync)
         await db.execute('''
@@ -71,8 +71,41 @@ class LocalDatabase {
             available_stock INTEGER NOT NULL
           )
         ''');
+
+        await _createCatalogRelationTables(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // v2: variantes (talla/precio) y sucursales para resolver el stock_id
+        // real de las operaciones offline (CU-12 / CU-15).
+        if (oldVersion < 2) {
+          await _createCatalogRelationTables(db);
+        }
       },
     );
+  }
+
+  Future<void> _createCatalogRelationTables(Database db) async {
+    // Variante del backend (variant_id) con su talla y precio: permite pasar de
+    // la prenda demo (nombre + talla) a la fila real de inventario sin red.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cached_variants (
+        variant_id INTEGER PRIMARY KEY,
+        product_id INTEGER NOT NULL,
+        product_name TEXT NOT NULL,
+        size_id INTEGER,
+        size_name TEXT,
+        price REAL
+      )
+    ''');
+
+    // Sucursales del backend para mapear el nombre demo → branch_id real.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cached_branches (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        address TEXT
+      )
+    ''');
   }
 
   // ── MÉTODOS DE LA COLA OFFLINE (SYNC QUEUE) ──
@@ -101,26 +134,35 @@ class LocalDatabase {
     final db = await database;
     final rows = await db.query(
       'offline_queue',
-      where: 'status IN (?, ?)',
-      whereArgs: ['LOCAL', 'CONFLICTO'],
+      where: 'status = ?',
+      whereArgs: ['LOCAL'],
       orderBy: 'id ASC',
     );
-    return rows.map((r) {
-      final map = Map<String, dynamic>.from(r);
-      try {
-        map['payload_data'] = jsonDecode(r['payload'] as String);
-      } catch (_) {
-        map['payload_data'] = {};
-      }
-      return map;
-    }).toList();
+    return rows.map(_queueRow).toList();
+  }
+
+  /// Toda la cola (incluye confirmadas y conflictos) para la pantalla de sync.
+  Future<List<Map<String, dynamic>>> getQueue() async {
+    final db = await database;
+    final rows = await db.query('offline_queue', orderBy: 'id DESC');
+    return rows.map(_queueRow).toList();
+  }
+
+  Map<String, dynamic> _queueRow(Map<String, dynamic> row) {
+    final map = Map<String, dynamic>.from(row);
+    try {
+      map['payload_data'] = jsonDecode(row['payload'] as String);
+    } catch (_) {
+      map['payload_data'] = {};
+    }
+    return map;
   }
 
   Future<int> countPending() async {
     final db = await database;
     final res = await db.rawQuery(
-      'SELECT COUNT(*) as cnt FROM offline_queue WHERE status IN (?, ?)',
-      ['LOCAL', 'CONFLICTO'],
+      'SELECT COUNT(*) as cnt FROM offline_queue WHERE status = ?',
+      ['LOCAL'],
     );
     return Sqflite.firstIntValue(res) ?? 0;
   }
@@ -142,14 +184,21 @@ class LocalDatabase {
     );
   }
 
+  Future<void> deleteQueueItem(String uuid) async {
+    final db = await database;
+    await db.delete('offline_queue', where: 'uuid = ?', whereArgs: [uuid]);
+  }
+
   Future<void> removeConfirmedQueueItems() async {
     final db = await database;
     await db.delete(
       'offline_queue',
-      where: 'status = ?',
-      whereArgs: ['SINCRONIZADO'],
+      where: 'status IN (?, ?)',
+      whereArgs: ['CONFIRMADO', 'DUPLICADO_IDEMPOTENTE'],
     );
   }
+
+  Future<void> clearProcessedQueue() => removeConfirmedQueueItems();
 
   // ── MÉTODOS DE CACHÉ DE PRODUCTOS E INVENTARIO ──
 
@@ -206,8 +255,8 @@ class LocalDatabase {
         oldPrice: (extra['oldPrice'] as num?)?.toDouble() ?? 0.0,
         discount: (extra['discount'] as num?)?.toInt() ?? 0,
         image: (r['image'] as String?) ?? '',
-        images: (extra['images'] as List?)?.cast<String>() ?? const [],
-        sizes: (extra['sizes'] as List?)?.cast<String>() ?? const [],
+        images: (extra['images'] as List?)?.cast<String>() ?? const <String>[],
+        sizes: (extra['sizes'] as List?)?.cast<String>() ?? const <String>[],
         description: (extra['description'] as String?) ?? '',
         rating: (extra['rating'] as num?)?.toDouble() ?? 0.0,
         reviews: (extra['reviews'] as num?)?.toInt() ?? 0,
@@ -241,5 +290,68 @@ class LocalDatabase {
       SET available_stock = MAX(0, available_stock - ?)
       WHERE variant_id = ? AND branch_id = ?
     ''', [qty, variantId, branchId]);
+  }
+
+  Future<void> decrementStockByStockId(int stockId, int qty) async {
+    final db = await database;
+    await db.rawUpdate('''
+      UPDATE cached_stock
+      SET available_stock = MAX(0, available_stock - ?)
+      WHERE stock_id = ?
+    ''', [qty, stockId]);
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedStock() async {
+    final db = await database;
+    return db.query('cached_stock');
+  }
+
+  Future<void> cacheVariants(List<Map<String, dynamic>> variants) async {
+    final db = await database;
+    final batch = db.batch();
+    batch.delete('cached_variants');
+    for (final v in variants) {
+      batch.insert(
+        'cached_variants',
+        {
+          'variant_id': v['variant_id'],
+          'product_id': v['product_id'],
+          'product_name': v['product_name'] ?? '',
+          'size_id': v['size_id'],
+          'size_name': v['size_name'],
+          'price': v['price'],
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedVariants() async {
+    final db = await database;
+    return db.query('cached_variants');
+  }
+
+  Future<void> cacheBranches(List<Map<String, dynamic>> branches) async {
+    final db = await database;
+    final batch = db.batch();
+    batch.delete('cached_branches');
+    for (final b in branches) {
+      batch.insert(
+        'cached_branches',
+        {
+          'id': b['id'],
+          'name': b['name'] ?? '',
+          'address': b['address'],
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedBranches() async {
+    final db = await database;
+    return db.query('cached_branches');
   }
 }

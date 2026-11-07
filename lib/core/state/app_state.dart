@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../features/app_repository.dart';
@@ -10,6 +11,7 @@ import '../../features/commerce/data/commerce_repository.dart';
 import '../data/mock_data.dart';
 import '../models/fashion_models.dart';
 import '../services/sync_manager.dart';
+import '../storage/local_database.dart';
 
 /// Estado global de la app móvil (espejo de `App.tsx` del prototipo).
 class AppState extends ChangeNotifier {
@@ -19,6 +21,15 @@ class AppState extends ChangeNotifier {
 
   final SyncManager syncManager = SyncManager.instance;
   final AppRepository _appRepo = AppRepository();
+  final CatalogRepository _catalogRepo = CatalogRepository();
+  final CommerceRepository _commerceRepo = CommerceRepository();
+  final LocalDatabase _db = LocalDatabase.instance;
+
+  /// Relaciones del backend necesarias para convertir una prenda demo en la
+  /// fila real de inventario (`stock_id`) de una operación offline.
+  List<BranchResponse> _branches = const [];
+  List<Map<String, dynamic>> _apiStocks = const [];
+  List<Map<String, dynamic>> _variants = const [];
 
   final List<CartItem> _cart = [];
   final List<int> _favs = [];
@@ -41,23 +52,27 @@ class AppState extends ChangeNotifier {
   UserResponse? _currentUser;
   String _searchQuery = '';
   bool _stockLoaded = false;
+  bool _remoteCatalogLoaded = false;
   bool _isOffline = false;
   String? _toast;
   Timer? _toastTimer;
 
   AppState() {
-    syncManager.isOnline.addListener(() {
-      _isOffline = !syncManager.isOnline.value;
-      notifyListeners();
-    });
+    syncManager.isOnline.addListener(_handleOnlineChanged);
     syncManager.pendingCount.addListener(notifyListeners);
     syncManager.isSyncing.addListener(notifyListeners);
+    unawaited(_loadCachedCatalog());
+  }
+
+  void _handleOnlineChanged() {
+    _isOffline = !syncManager.isOnline.value;
+    notifyListeners();
   }
 
   @override
   void dispose() {
     _toastTimer?.cancel();
-    syncManager.isOnline.removeListener(notifyListeners);
+    syncManager.isOnline.removeListener(_handleOnlineChanged);
     syncManager.pendingCount.removeListener(notifyListeners);
     syncManager.isSyncing.removeListener(notifyListeners);
     super.dispose();
@@ -96,12 +111,23 @@ class AppState extends ChangeNotifier {
 
   /// Sincroniza el inventario real por sucursal contra la base de datos de la API
   /// (`GET /inventory/stock`), idéntico al cálculo de la versión Web (`CatalogStore`).
+  ///
+  /// Además guarda una instantánea en SQLite para que catálogo, carrito, ventas y
+  /// reservas sigan operando sin conexión (CU-09, CU-12, CU-15).
   Future<void> refreshStockFromRemote({CatalogRepository? catalogRepo}) async {
+    final repo = catalogRepo ?? _catalogRepo;
     try {
-      final repo = catalogRepo ?? CatalogRepository();
       final branches = await repo.branches();
       final apiProducts = await repo.products();
       final stocks = await repo.inventoryStock();
+      List<Map<String, dynamic>> sizes = const [];
+      try {
+        sizes = await repo.sizes();
+      } catch (_) {}
+
+      _branches = branches;
+      _apiStocks = stocks;
+      _variants = _buildVariants(apiProducts, sizes);
 
       _products = _products.map((p) {
         final apiProd = apiProducts.cast<ProductResponse?>().firstWhere(
@@ -139,10 +165,241 @@ class AppState extends ChangeNotifier {
         return p.copyWith(stock: newStockMap);
       }).toList();
 
+      await _persistCatalog(branches, stocks);
+      _remoteCatalogLoaded = true;
+      syncManager.setOnlineStatus(true);
       _stockLoaded = true;
       notifyListeners();
+    } on DioException catch (e) {
+      if (_isConnectionError(e)) syncManager.setOnlineStatus(false);
+      _stockLoaded = true;
+      await _loadCachedCatalog();
     } catch (_) {
       _stockLoaded = true;
+      await _loadCachedCatalog();
+    }
+  }
+
+  Future<void> _persistCatalog(
+    List<BranchResponse> branches,
+    List<Map<String, dynamic>> stocks,
+  ) async {
+    try {
+      await _db.cacheProducts(_products);
+      await _db.cacheStock(stocks);
+      await _db.cacheVariants(_variants);
+      await _db.cacheBranches(branches
+          .map((b) => {'id': b.id, 'name': b.name, 'address': b.address})
+          .toList());
+    } catch (_) {
+      // La falta de almacenamiento local no debe romper la sesión online.
+    }
+  }
+
+  /// Carga la última instantánea guardada en SQLite (arranque sin conexión).
+  Future<void> _loadCachedCatalog() async {
+    if (_remoteCatalogLoaded) return;
+    try {
+      final cachedProducts = await _db.getCachedProducts();
+      if (cachedProducts.isNotEmpty) _products = cachedProducts;
+
+      final cachedStocks = await _db.getCachedStock();
+      if (cachedStocks.isNotEmpty) {
+        _apiStocks = cachedStocks.map((s) => Map<String, dynamic>.from(s)).toList();
+      }
+
+      final cachedBranches = await _db.getCachedBranches();
+      if (cachedBranches.isNotEmpty) {
+        _branches = cachedBranches
+            .map((b) => BranchResponse(
+                  id: (b['id'] as num?)?.toInt() ?? 0,
+                  cityId: 0,
+                  name: '${b['name'] ?? ''}',
+                  address: '${b['address'] ?? ''}',
+                  isActive: true,
+                ))
+            .toList();
+      }
+
+      final cachedVariants = await _db.getCachedVariants();
+      if (cachedVariants.isNotEmpty) {
+        _variants = cachedVariants.map((v) => Map<String, dynamic>.from(v)).toList();
+      }
+
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  List<Map<String, dynamic>> _buildVariants(
+    List<ProductResponse> products,
+    List<Map<String, dynamic>> sizes,
+  ) {
+    final sizeNames = <int, String>{};
+    for (final s in sizes) {
+      final id = (s['id'] as num?)?.toInt();
+      final name = (s['name'] ?? s['value'] ?? '').toString();
+      if (id != null && name.isNotEmpty) sizeNames[id] = name;
+    }
+
+    final result = <Map<String, dynamic>>[];
+    for (final product in products) {
+      for (final variant in product.variants) {
+        final sizeId = variant.sizeId;
+        result.add({
+          'variant_id': variant.id,
+          'product_id': product.id,
+          'product_name': product.name,
+          'size_id': sizeId,
+          'size_name': sizeId != null ? (sizeNames[sizeId] ?? '$sizeId') : null,
+          'price': product.price,
+        });
+      }
+    }
+    return result;
+  }
+
+  static bool _isConnectionError(DioException e) =>
+      e.type == DioExceptionType.connectionError ||
+      e.type == DioExceptionType.connectionTimeout ||
+      e.type == DioExceptionType.sendTimeout ||
+      e.type == DioExceptionType.receiveTimeout ||
+      (e.type == DioExceptionType.unknown && e.response == null);
+
+  /// Resuelve la sucursal del backend a partir del nombre demo usado por la app.
+  int resolveBranchId(String storeName) {
+    String norm(String value) => value
+        .toLowerCase()
+        .replaceAll('sucursal', '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    final wanted = norm(storeName);
+    for (final branch in _branches) {
+      final name = norm(branch.name);
+      if (name == wanted || name.contains(wanted) || wanted.contains(name)) {
+        return branch.id;
+      }
+    }
+    for (final keyword in const ['norte', 'sur', 'centro']) {
+      if (wanted.contains(keyword)) {
+        for (final branch in _branches) {
+          if (norm(branch.name).contains(keyword)) return branch.id;
+        }
+      }
+    }
+    if (_branches.isNotEmpty) return _branches.first.id;
+    if (wanted.contains('norte')) return 2;
+    if (wanted.contains('sur')) return 3;
+    return 1;
+  }
+
+  Map<String, dynamic>? _findVariant(String productName, String? size) {
+    final wanted = productName.trim().toLowerCase();
+    var matches = _variants
+        .where((v) => '${v['product_name'] ?? ''}'.trim().toLowerCase() == wanted)
+        .toList();
+    if (matches.isEmpty) {
+      matches = _variants.where((v) {
+        final name = '${v['product_name'] ?? ''}'.trim().toLowerCase();
+        return name.isNotEmpty && (name.contains(wanted) || wanted.contains(name));
+      }).toList();
+    }
+    if (matches.isEmpty) return null;
+
+    final wantedSize = (size ?? '').trim().toLowerCase();
+    if (wantedSize.isNotEmpty) {
+      for (final variant in matches) {
+        if ('${variant['size_name'] ?? ''}'.trim().toLowerCase() == wantedSize) {
+          return variant;
+        }
+      }
+    }
+    return matches.first;
+  }
+
+  Map<String, dynamic>? _findStock(int variantId, int branchId, int quantity) {
+    if (variantId <= 0) return null;
+    final rows = _apiStocks
+        .where((s) =>
+            ((s['variant_id'] as num?)?.toInt() ?? 0) == variantId &&
+            ((s['branch_id'] as num?)?.toInt() ?? 0) == branchId)
+        .toList();
+    for (final row in rows) {
+      if (((row['available_stock'] as num?)?.toInt() ?? 0) >= quantity) return row;
+    }
+    for (final row in rows) {
+      if (((row['available_stock'] as num?)?.toInt() ?? 0) > 0) return row;
+    }
+    // Si el inventario de la sucursal quedó desactualizado, usar otra fila del
+    // mismo producto para no perder la operación.
+    for (final row in _apiStocks.where(
+        (s) => ((s['variant_id'] as num?)?.toInt() ?? 0) == variantId)) {
+      if (((row['available_stock'] as num?)?.toInt() ?? 0) > 0) return row;
+    }
+    return null;
+  }
+
+  static int _stockRowId(Map<String, dynamic> stock) =>
+      ((stock['stock_id'] ?? stock['id']) as num?)?.toInt() ?? 0;
+
+  /// Resuelve la fila de inventario (`stock_id`) para una prenda/talla/sucursal.
+  int? resolveStockId({
+    required String productName,
+    String? size,
+    required int branchId,
+    int quantity = 1,
+  }) {
+    final variant = _findVariant(productName, size);
+    final variantId = (variant?['variant_id'] as num?)?.toInt() ?? 0;
+    final stock = _findStock(variantId, branchId, quantity);
+    if (stock == null) return null;
+    final id = _stockRowId(stock);
+    return id > 0 ? id : null;
+  }
+
+  /// Ítem listo para el contrato de `POST /sync/batch`.
+  Map<String, dynamic>? resolveSaleItem({
+    required String productName,
+    String? size,
+    required int branchId,
+    required int quantity,
+    required double fallbackPrice,
+  }) {
+    final variant = _findVariant(productName, size);
+    if (variant == null) return null;
+    final variantId = (variant['variant_id'] as num?)?.toInt() ?? 0;
+    final stock = _findStock(variantId, branchId, quantity);
+    if (stock == null) return null;
+    final stockId = _stockRowId(stock);
+    if (stockId <= 0) return null;
+    return {
+      'stock_id': stockId,
+      'quantity': quantity,
+      'unit_price': (variant['price'] as num?)?.toDouble() ?? fallbackPrice,
+    };
+  }
+
+  /// Crea una reserva en el backend (`POST /commerce/reservations`).
+  Future<Map<String, dynamic>?> createReservationRemote({
+    required int branchId,
+    required int stockId,
+    required DateTime scheduledAt,
+  }) async {
+    try {
+      final result = await _commerceRepo.createReservation(
+        branchId: branchId,
+        scheduledAt: scheduledAt,
+        items: [
+          {'stock_id': stockId, 'quantity': 1},
+        ],
+      );
+      syncManager.setOnlineStatus(true);
+      return result;
+    } on DioException catch (e) {
+      if (_isConnectionError(e)) syncManager.setOnlineStatus(false);
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -150,8 +407,9 @@ class AppState extends ChangeNotifier {
   /// compras hechas en Web se reflejen inmediatamente en las notificaciones del móvil.
   Future<void> syncRemoteSales({CommerceRepository? commerceRepo}) async {
     try {
-      final repo = commerceRepo ?? CommerceRepository();
+      final repo = commerceRepo ?? _commerceRepo;
       final sales = await repo.listSales();
+      syncManager.setOnlineStatus(true);
       var changed = false;
       for (final sale in sales) {
         final id = sale['id'];
@@ -181,7 +439,12 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> completePurchase(Purchase p, {int? branchId}) async {
+  Future<void> completePurchase(
+    Purchase p, {
+    int? branchId,
+    List<Map<String, dynamic>>? saleItems,
+    bool? remoteCompleted,
+  }) async {
     _purchases.insert(0, p);
     _cart.clear();
     _lastPurchase = p;
@@ -202,30 +465,48 @@ class AppState extends ChangeNotifier {
       return prod.copyWith(stock: newStock);
     }).toList();
 
-    final targetBranchId =
-        branchId ?? (branchKey == 'Norte' ? 2 : (branchKey == 'Sur' ? 3 : 1));
-    final saleItems = p.items
-        .map((it) => {
-              'stock_id': it.productId,
-              'quantity': it.qty,
-              'unit_price': it.price,
-            })
-        .toList();
+    final targetBranchId = branchId ?? resolveBranchId(storeName);
 
-    if (_isOffline) {
-      final uuid = await syncManager.recordOfflineSale(
-        branchId: targetBranchId,
-        clientId: _currentUser?.id,
-        items: saleItems,
-        total: p.total,
-      );
-      setToast('Venta guardada offline (UUID: ${uuid.substring(0, 8)})');
+    // Se encola cuando la app está offline o cuando el checkout remoto falló
+    // a mitad de camino: en ambos casos el backend aún no conoce la venta.
+    final mustQueue = _isOffline || remoteCompleted == false;
+
+    if (mustQueue) {
+      final items = saleItems ?? _resolveSaleItems(p, targetBranchId);
+      if (items.isEmpty) {
+        setToast(
+          'Venta guardada en el dispositivo; no se pudo asociar al inventario central.',
+        );
+      } else {
+        final uuid = await syncManager.recordOfflineSale(
+          branchId: targetBranchId,
+          clientId: _currentUser?.id,
+          items: items,
+          total: p.total,
+        );
+        setToast('Venta guardada offline (UUID: ${uuid.substring(0, 8)})');
+      }
     } else {
       unawaited(refreshStockFromRemote().catchError((_) {}));
       unawaited(syncRemoteSales().catchError((_) {}));
     }
 
     notifyListeners();
+  }
+
+  List<Map<String, dynamic>> _resolveSaleItems(Purchase p, int branchId) {
+    final items = <Map<String, dynamic>>[];
+    for (final item in p.items) {
+      final resolved = resolveSaleItem(
+        productName: item.name,
+        size: item.size,
+        branchId: branchId,
+        quantity: item.qty,
+        fallbackPrice: item.price,
+      );
+      if (resolved != null) items.add(resolved);
+    }
+    return items;
   }
 
   static String _extractBranchKey(String store) {
@@ -340,21 +621,73 @@ class AppState extends ChangeNotifier {
 
   double get cartSubtotal => _cart.fold(0, (sum, i) => sum + i.price * i.qty);
 
-  Future<void> addReservation(Reservation r, {int? branchId, int? variantId}) async {
+  /// Registra una reserva local. Si no hay conexión, la encola para sincronizar
+  /// con el `stock_id` real resuelto desde la instantánea de inventario.
+  Future<void> addReservation(
+    Reservation r, {
+    int? branchId,
+    int? stockId,
+    double price = 0,
+    DateTime? scheduledAt,
+  }) async {
     _reservations.insert(0, r);
+
     if (_isOffline) {
-      final bId = branchId ?? 1;
-      final vId = variantId ?? r.productId;
-      final uuid = await syncManager.recordOfflineReservation(
-        branchId: bId,
-        variantId: vId,
-        date: r.date,
-        time: r.time,
-      );
-      setToast('Reserva guardada offline (UUID: ${uuid.substring(0, 8)})');
+      final targetBranchId = branchId ?? resolveBranchId(r.store);
+      if (stockId != null && stockId > 0) {
+        final uuid = await syncManager.recordOfflineReservation(
+          branchId: targetBranchId,
+          clientId: _currentUser?.id,
+          items: [
+            {'stock_id': stockId, 'quantity': 1, 'unit_price': price},
+          ],
+          scheduledAt: scheduledAt ?? _slotFromReservation(r),
+        );
+        setToast('Reserva guardada offline (UUID: ${uuid.substring(0, 8)})');
+      } else {
+        setToast(
+          'Reserva guardada en el dispositivo; no se pudo asociar al inventario central.',
+        );
+      }
     }
+
     notifyListeners();
   }
+
+  static const _monthNumbers = {
+    'ene': 1,
+    'feb': 2,
+    'mar': 3,
+    'abr': 4,
+    'may': 5,
+    'jun': 6,
+    'jul': 7,
+    'ago': 8,
+    'sep': 9,
+    'oct': 10,
+    'nov': 11,
+    'dic': 12,
+  };
+
+  /// Convierte la fecha/hora de la UI ("22 sep 2026" + "10:30") en [DateTime].
+  static DateTime reservationSlot(String date, String time) {
+    final parts = date.trim().toLowerCase().split(RegExp(r'\s+'));
+    final day = parts.isNotEmpty ? int.tryParse(parts[0]) : null;
+    final month = parts.length > 1 ? _monthNumbers[parts[1]] : null;
+    final year = parts.length > 2 ? int.tryParse(parts[2]) : null;
+
+    final timeParts = time.split(':');
+    final hour = timeParts.isNotEmpty ? int.tryParse(timeParts[0]) : null;
+    final minute = timeParts.length > 1 ? int.tryParse(timeParts[1]) : 0;
+
+    if (day != null && month != null && year != null) {
+      return DateTime(year, month, day, hour ?? 10, minute ?? 0);
+    }
+    return DateTime.now().add(const Duration(days: 1));
+  }
+
+  static DateTime _slotFromReservation(Reservation r) =>
+      reservationSlot(r.date, r.time);
 
   Future<void> cancelReservation(String id) async {
     _reservations = _reservations
@@ -370,6 +703,14 @@ class AppState extends ChangeNotifier {
       } catch (_) {}
     }
   }
+
+  /// CU20 — reporte analítico asistido por IA (texto o voz).
+  ///
+  /// La consulta viaja a `POST /ai-reports/query`, que interpreta el lenguaje
+  /// natural, ejecuta el reporte y devuelve la síntesis ejecutiva junto a las
+  /// filas y los datos del gráfico.
+  Future<Map<String, dynamic>> generateAiReport(String query) =>
+      _appRepo.generateAiReport(query);
 
   Future<Map<String, dynamic>> createExchange({
     required int branchId,
@@ -404,7 +745,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cambia el modo offline manual (modo demo) delegando en [SyncManager].
+  /// Al volver a online se intenta sincronizar automáticamente la cola.
   void setOffline(bool v) {
+    syncManager.setOnlineStatus(!v);
     _isOffline = v;
     notifyListeners();
   }

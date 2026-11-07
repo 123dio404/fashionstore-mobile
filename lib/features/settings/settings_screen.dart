@@ -64,6 +64,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _switchRow('Compartir datos anónimos', true, (_) {}),
                     _switchRow('Historial de búsquedas', true, (_) {}),
                   ]),
+                  _group('Datos y sincronización', [
+                    _tapRow(
+                      'Cola de sincronización',
+                      '${s.syncManager.pendingCount.value} pendientes',
+                      () => s.openOverlay(OverlayScreen.syncQueue),
+                    ),
+                  ]),
                   _group('Acerca de', [
                     _infoRow('Versión de la app', '2.4.1'),
                     _infoRow('Términos y condiciones', null, chevron: true),
@@ -247,6 +254,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Icon(Icons.chevron_right,
                   size: 16, color: AppColors.mutedLight),
           ],
+        ),
+      );
+
+  Widget _tapRow(String label, String value, VoidCallback onTap) => InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.borderLight)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(label,
+                    style:
+                        AppTextStyles.bodySize(14, weight: FontWeight.w500)),
+              ),
+              Text(value,
+                  style:
+                      AppTextStyles.bodySize(13, color: AppColors.mutedLight)),
+              const Icon(Icons.chevron_right,
+                  size: 16, color: AppColors.mutedLight),
+            ],
+          ),
         ),
       );
 

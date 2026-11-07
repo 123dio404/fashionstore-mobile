@@ -23,6 +23,8 @@ enum OverlayScreen {
   voice,
   preferences,
   settings,
+  aiReport,
+  syncQueue,
   support,
   stateDemo,
 }
@@ -256,6 +258,10 @@ class Purchase {
   final String? store;
   final List<PurchaseItem> items;
 
+  /// `true` cuando la venta se generó sin conexión y todavía vive en la cola
+  /// local de sincronización (`POST /sync/batch`, CU-09/CU-12).
+  final bool pendingSync;
+
   const Purchase({
     required this.id,
     required this.date,
@@ -267,6 +273,7 @@ class Purchase {
     required this.deliveryMethod,
     this.store,
     this.items = const [],
+    this.pendingSync = false,
   });
 }
 

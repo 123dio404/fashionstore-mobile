@@ -20,10 +20,12 @@ import 'notifications/notifications_screen.dart';
 import 'preferences/preferences_screen.dart';
 import 'profile/profile_screen.dart';
 import 'purchases/purchases_screen.dart';
+import 'reports/ai_report_screen.dart';
 import 'reservations/reservations_screen.dart';
 import 'settings/settings_screen.dart';
 import 'state_demo/state_demo_screen.dart';
 import 'support/support_screen.dart';
+import 'sync/sync_queue_screen.dart';
 import 'voice/voice_screen.dart';
 
 /// Contenedor principal: pestañas + overlays + detalle de producto.
@@ -151,6 +153,8 @@ class _AppShellState extends State<AppShell> {
         OverlayScreen.voice => const VoiceScreen(),
         OverlayScreen.preferences => const PreferencesScreen(),
         OverlayScreen.settings => const SettingsScreen(),
+        OverlayScreen.aiReport => const AiReportScreen(),
+        OverlayScreen.syncQueue => const SyncQueueScreen(),
         OverlayScreen.support => const SupportScreen(),
         OverlayScreen.stateDemo => const StateDemoScreen(),
         OverlayScreen.none => const SizedBox.shrink(),

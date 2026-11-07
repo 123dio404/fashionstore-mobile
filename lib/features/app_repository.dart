@@ -46,6 +46,12 @@ class AppRepository {
       Map<String, dynamic>.from(
           (await dio.put(ApiConstants.currentUser, data: data)).data);
 
+  /// CU20 — consulta analítica en lenguaje natural (texto o transcripción de
+  /// voz) contra `POST /ai-reports/query`.
+  Future<Map<String, dynamic>> generateAiReport(String query) async =>
+      Map<String, dynamic>.from(
+          (await dio.post(ApiConstants.aiReport, data: {'query': query})).data);
+
   Future<Map<String, dynamic>> analyticalQueryVoice(
       List<int> bytes, String filename,
       {int? clientId}) async {

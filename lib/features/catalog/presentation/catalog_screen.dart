@@ -136,38 +136,36 @@ class _CatalogScreenState extends State<CatalogScreen> {
           children: [
             _header(s),
             Expanded(
-              child: s.isOffline
-                  ? const OfflineState()
-                  : RefreshIndicator(
-                      color: AppColors.accent,
-                      onRefresh: _load,
-                      child: _loading
-                          ? _skeleton()
-                          : results.isEmpty
-                              ? SingleChildScrollView(
-                                  child: EmptyState(
-                                    icon: Icons.search_off,
-                                    title: 'Sin resultados',
-                                    subtitle:
-                                        'No encontramos productos que coincidan con tu búsqueda. Prueba con otros términos.',
-                                    cta: 'Limpiar filtros',
-                                    onCta: _clear,
-                                  ),
-                                )
-                              : ListView(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(20, 0, 20, 110),
-                                  children: [
-                                    Text(
-                                      '${results.length} producto${results.length != 1 ? 's' : ''}',
-                                      style: AppTextStyles.bodySize(12,
-                                          color: AppColors.muted),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _grid(results, s),
-                                  ],
-                                ),
-                    ),
+              child: RefreshIndicator(
+                color: AppColors.accent,
+                onRefresh: _load,
+                child: _loading
+                    ? _skeleton()
+                    : results.isEmpty
+                        ? SingleChildScrollView(
+                            child: EmptyState(
+                              icon: Icons.search_off,
+                              title: 'Sin resultados',
+                              subtitle:
+                                  'No encontramos productos que coincidan con tu búsqueda. Prueba con otros términos.',
+                              cta: 'Limpiar filtros',
+                              onCta: _clear,
+                            ),
+                          )
+                        : ListView(
+                            padding:
+                                const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                            children: [
+                              Text(
+                                '${results.length} producto${results.length != 1 ? 's' : ''}',
+                                style: AppTextStyles.bodySize(12,
+                                    color: AppColors.muted),
+                              ),
+                              const SizedBox(height: 12),
+                              _grid(results, s),
+                            ],
+                          ),
+              ),
             ),
           ],
         ),

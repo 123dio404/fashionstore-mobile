@@ -92,4 +92,26 @@ class CommerceRepository {
     }
     return [];
   }
+
+  /// Crea una reserva de probador con una fila real de inventario
+  /// (`stock_id`). El backend espera fecha y hora separadas (CU-15).
+  Future<Map<String, dynamic>> createReservation({
+    required int branchId,
+    required DateTime scheduledAt,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final date = scheduledAt.toIso8601String().split('T').first;
+    final time =
+        '${scheduledAt.hour.toString().padLeft(2, '0')}:${scheduledAt.minute.toString().padLeft(2, '0')}:00';
+    final response = await _dio.post(
+      ApiConstants.reservations,
+      data: {
+        'branch_id': branchId,
+        'reservation_date': date,
+        'reservation_time': time,
+        'items': items,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
 }

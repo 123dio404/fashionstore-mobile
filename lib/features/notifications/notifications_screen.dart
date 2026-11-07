@@ -90,18 +90,23 @@ class _NotificationCard extends StatelessWidget {
     final s = AppScope.of(context);
     final isRejected = item.type == 'payment_rejected';
     final isPurchase = item.type == 'purchase_success';
+    final isOfflinePurchase = item.type == 'purchase_offline';
 
     final Color badgeColor = isRejected
         ? AppColors.danger
         : isPurchase
             ? AppColors.success
-            : AppColors.dark;
+            : isOfflinePurchase
+                ? AppColors.warning
+                : AppColors.dark;
 
     final IconData icon = isRejected
         ? Icons.error_outline
         : isPurchase
             ? Icons.check_circle_outline
-            : Icons.info_outline;
+            : isOfflinePurchase
+                ? Icons.cloud_off_outlined
+                : Icons.info_outline;
 
     return Container(
       padding: const EdgeInsets.all(16),

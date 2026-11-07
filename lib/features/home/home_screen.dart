@@ -58,23 +58,21 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _header(),
             Expanded(
-              child: s.isOffline
-                  ? const OfflineState()
-                  : ListView(
-                      padding: const EdgeInsets.only(bottom: 110),
-                      children: [
-                        _categories(),
-                        const SizedBox(height: 16),
-                        _banners(),
-                        const SizedBox(height: 20),
-                        _aiBanner(s),
-                        const SizedBox(height: 28),
-                        _featuredRow(),
-                        const SizedBox(height: 28),
-                        _grid(),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 110),
+                children: [
+                  _categories(),
+                  const SizedBox(height: 16),
+                  _banners(),
+                  const SizedBox(height: 20),
+                  _aiBanner(s),
+                  const SizedBox(height: 28),
+                  _featuredRow(),
+                  const SizedBox(height: 28),
+                  _grid(),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ],
         ),
