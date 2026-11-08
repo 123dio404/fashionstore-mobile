@@ -400,7 +400,7 @@ class _ArFitterScreenState extends State<ArFitterScreen> {
                     Text(_product.name,
                         style:
                             AppTextStyles.bodySize(15, weight: FontWeight.w700)),
-                    Text('\$${_product.price.toStringAsFixed(2)}',
+                    Text('Bs. ${_product.price.toStringAsFixed(2)}',
                         style: AppTextStyles.bodySize(13,
                             color: AppColors.accent, weight: FontWeight.w700)),
                   ],

@@ -191,7 +191,7 @@ class _AiRecommendationsScreenState extends State<AiRecommendationsScreen> {
             border: InputBorder.none,
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            prefixText: '\$ ',
+            prefixText: 'Bs. ',
             prefixStyle: AppTextStyles.bodySize(12, color: AppColors.mutedLight),
             hintText: hint,
             hintStyle: AppTextStyles.bodySize(12, color: AppColors.mutedLight),
@@ -420,11 +420,11 @@ class _AiRecommendationsScreenState extends State<AiRecommendationsScreen> {
           const SizedBox(height: 3),
           Row(
             children: [
-              Text('\$${p.price.toStringAsFixed(2)}',
+              Text('Bs. ${p.price.toStringAsFixed(2)}',
                   style: AppTextStyles.bodySize(14, weight: FontWeight.w700)),
               const SizedBox(width: 6),
               Text(
-                '\$${p.oldPrice.toStringAsFixed(2)}',
+                'Bs. ${p.oldPrice.toStringAsFixed(2)}',
                 style: AppTextStyles.bodySize(11,
                         color: AppColors.mutedLight)
                     .copyWith(decoration: TextDecoration.lineThrough),

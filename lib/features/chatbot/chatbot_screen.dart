@@ -12,42 +12,50 @@ class _Msg {
 }
 
 const _quick = [
+  '¿Qué prendas tienen en stock?',
   '¿Cómo devuelvo un producto?',
   '¿Tienen envío gratis?',
-  'Código de descuento',
   '¿Cómo reservo un probador?',
 ];
 
-String _botReply(String text) {
+String _botReply(String text, BuildContext context) {
   final t = text.toLowerCase();
+  final s = AppScope.read(context);
+  if (t.contains('stock') || t.contains('prenda') || t.contains('disponib') || t.contains('precio')) {
+    final top = s.products.take(3).toList();
+    if (top.isNotEmpty) {
+      final list = top.map((p) => '${p.name} (Bs. ${p.price.toStringAsFixed(2)})').join(', ');
+      return 'Actualmente contamos con stock disponible en: $list. Puedes reservarlas para probar en tienda o agregarlas a tu carrito.';
+    }
+  }
   if (t.contains('talla')) {
     return 'Para encontrar tu talla ideal, te recomendamos usar nuestra Guía de Tallas disponible en cada producto. También puedes reservar un turno en el Probador Virtual.';
   }
   if (t.contains('envío') || t.contains('envio')) {
-    return 'El envío estándar tarda 3–5 días hábiles con un costo de \$4.99. El retiro en tienda está disponible en 24 horas sin costo adicional.';
+    return 'El envío estándar tarda 24–48 horas hábiles con un costo de Bs. 25.00 (gratis en compras mayores a Bs. 350.00). El retiro y reserva en sucursal es gratuito.';
   }
   if (t.contains('pago')) {
-    return 'Aceptamos Visa, Mastercard, American Express, Apple Pay y Google Pay. Todos los pagos se procesan de forma segura mediante Stripe.';
+    return 'Aceptamos tarjetas de débito/crédito, QR Simple y pago presencial en sucursal (efectivo o tarjeta en caja POS).';
   }
-  if (t.contains('devol')) {
-    return 'Puedes devolver o cambiar un producto dentro de los 30 días desde la compra. El artículo debe estar sin uso y con sus etiquetas originales.';
+  if (t.contains('devol') || t.contains('cambio')) {
+    return 'Puedes devolver o cambiar la talla de tu prenda dentro de los 30 días desde la compra en "Mis compras" o en cualquier sucursal.';
   }
-  if (t.contains('reserva')) {
-    return 'Para reservar un probador, ve a la pestaña "Reservas" en la navegación inferior, elige el producto, la sucursal y el horario disponible.';
+  if (t.contains('reserva') || t.contains('probador')) {
+    return 'Para reservar un probador O2O, ve a la pestaña "Reservas" en la navegación inferior, elige la prenda, la sucursal y tu horario.';
   }
-  if (t.contains('descuento') || t.contains('código') || t.contains('codigo')) {
-    return '¡Claro! Usa el código FASHION10 en tu carrito para obtener un 10% de descuento en tu próxima compra.';
+  if (t.contains('descuento') || t.contains('código') || t.contains('codigo') || t.contains('promo')) {
+    return '¡Claro! Usa el código FASHION10 en tu carrito para obtener un 10% de descuento adicional en tu compra.';
   }
-  if (t.contains('horario')) {
-    return 'Nuestras sucursales abren de lunes a sábado de 10:00 a 21:00 hs. La Sucursal Sur cierra a las 20:00 hs.';
+  if (t.contains('horario') || t.contains('sucursal')) {
+    return 'Nuestras sucursales atienden de lunes a sábado de 09:30 a 21:00 hrs.';
   }
   if (t.contains('hola') || t.contains('buenas')) {
-    return '¡Hola! Soy el asistente virtual de FashionStore. ¿En qué puedo ayudarte hoy?';
+    return '¡Hola! Soy Aria, el asistente virtual con IA de FashionStore. ¿En qué puedo ayudarte hoy?';
   }
   if (t.contains('gracias')) {
     return '¡De nada! ¿Hay algo más en lo que pueda ayudarte?';
   }
-  return 'Entiendo tu consulta. Para más información, puedes revisar nuestra sección de Ayuda y Soporte o contactarnos por correo a soporte@fashionstore.com';
+  return 'Entiendo tu consulta. Puedo ayudarte con stock y precios en Bolivianos (Bs.), reservas de probador, cambios de talla o estado de tus compras.';
 }
 
 /// Asistente virtual con respuestas rápidas y burbujas de chat.
@@ -95,10 +103,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       _typing = true;
     });
     _scrollDown();
-    Future<void>.delayed(const Duration(milliseconds: 900), () {
+    Future<void>.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       setState(() {
-        _messages.add(_Msg('assistant', _botReply(t), DateTime.now()));
+        _messages.add(_Msg('assistant', _botReply(t, context), DateTime.now()));
         _typing = false;
       });
       _scrollDown();
