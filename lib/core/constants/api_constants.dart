@@ -3,7 +3,7 @@ class ApiConstants {
 
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://fashionstore-backend-ph17.onrender.com/api/v1',
+    defaultValue: 'https://fashionstore-backend-1.onrender.com/api/v1',
   );
 
   static const login = '/auth/login';

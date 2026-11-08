@@ -156,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _useDemo(String email) {
     setState(() {
       _email.text = email;
-      _password.text = 'admin123';
+      _password.text = 'Admin123';
       _emailErr = null;
       _passErr = null;
       _generalErr = null;
@@ -333,7 +333,7 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'CUENTAS DEMO (CONTRASEÑA admin123)',
+              'CUENTAS DEMO (CONTRASEÑA Admin123)',
               style: AppTextStyles.bodySize(10,
                   color: AppColors.muted,
                   weight: FontWeight.w700,
@@ -347,7 +347,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 for (final mail in const [
                   'cliente@fashionstore.com',
                   'admin@fashionstore.com',
-                  'cajero@fashionstore.com',
+                  'cliente@mundomedias.com',
+                  'admin@mundomedias.com',
+                  'cliente@tenisurbanos.com',
+                  'admin@elegancefashion.com',
                 ])
                   GestureDetector(
                     onTap: () => _useDemo(mail),
@@ -358,7 +361,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                       child: Text(
-                        mail.split('@').first,
+                        '${mail.split('@').first} (${mail.split('@').last.split('.').first})',
                         style: AppTextStyles.bodySize(11,
                             color: AppColors.accentDark, weight: FontWeight.w600),
                       ),
