@@ -32,6 +32,7 @@ enum Role {
 
 class UserResponse {
   final int id;
+  final int? tenantId;
   final String email;
   final String fullName;
   final Role role;
@@ -39,6 +40,7 @@ class UserResponse {
 
   const UserResponse({
     required this.id,
+    this.tenantId,
     required this.email,
     required this.fullName,
     required this.role,
@@ -47,6 +49,7 @@ class UserResponse {
 
   factory UserResponse.fromJson(Map<String, dynamic> json) => UserResponse(
         id: int.tryParse('${json['id']}') ?? 0,
+        tenantId: json['tenant_id'] == null ? null : int.tryParse('${json['tenant_id']}'),
         email: '${json['email'] ?? ''}',
         fullName: '${json['full_name'] ?? ''}',
         role: Role.fromJson('${json['role'] ?? 'Cliente'}'),
