@@ -163,6 +163,80 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  void _openForgotPasswordDialog() {
+    final emailCtrl = TextEditingController(text: _email.text.trim());
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        bool sending = false;
+        String? statusMsg;
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.surface,
+              title: const Text('Recuperar contraseña', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ingresa tu correo electrónico registrado y te enviaremos el enlace para restablecer tu contraseña:',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Correo electrónico',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  if (statusMsg != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      statusMsg!,
+                      style: const TextStyle(color: Color(0xFF059669), fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cerrar'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
+                  onPressed: sending
+                      ? null
+                      : () async {
+                          final mail = emailCtrl.text.trim();
+                          if (mail.isEmpty) return;
+                          setDialogState(() => sending = true);
+                          try {
+                            final res = await widget.auth.forgotPassword(mail);
+                            setDialogState(() {
+                              sending = false;
+                              statusMsg = res['detail'] ?? 'Enlace enviado con éxito al correo.';
+                            });
+                          } catch (_) {
+                            setDialogState(() {
+                              sending = false;
+                              statusMsg = 'Si el correo está registrado, recibirás las instrucciones.';
+                            });
+                          }
+                        },
+                  child: Text(sending ? 'Enviando...' : 'Enviar enlace', style: const TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -265,10 +339,13 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
-            child: Text(
-              '¿Olvidaste tu contraseña?',
-              style: AppTextStyles.bodySize(12,
-                  color: AppColors.accent, weight: FontWeight.w600),
+            child: GestureDetector(
+              onTap: _openForgotPasswordDialog,
+              child: Text(
+                '¿Olvidaste tu contraseña?',
+                style: AppTextStyles.bodySize(12,
+                    color: AppColors.accent, weight: FontWeight.w600),
+              ),
             ),
           ),
           const SizedBox(height: 24),

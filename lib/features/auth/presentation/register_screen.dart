@@ -86,8 +86,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (_password.text.isEmpty) {
       p = 'La contraseña es obligatoria';
-    } else if (_password.text.length < 6) {
-      p = 'Mínimo 6 caracteres';
+    } else if (_password.text.length < 8) {
+      p = 'Mínimo 8 caracteres';
+    } else if (!RegExp(r'[A-Z]').hasMatch(_password.text)) {
+      p = 'Debe incluir al menos una letra mayúscula (A-Z)';
+    } else if (!RegExp(r'[a-z]').hasMatch(_password.text)) {
+      p = 'Debe incluir al menos una letra minúscula (a-z)';
+    } else if (!RegExp(r'[0-9]').hasMatch(_password.text)) {
+      p = 'Debe incluir al menos un número (0-9)';
+    } else if (!RegExp(r'[^A-Za-z0-9]').hasMatch(_password.text)) {
+      p = 'Debe incluir al menos un carácter especial (!@#\$%...)';
     }
     if (_password.text != _confirm.text) {
       c = 'Las contraseñas no coinciden';

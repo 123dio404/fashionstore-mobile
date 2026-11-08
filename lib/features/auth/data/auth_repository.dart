@@ -41,6 +41,24 @@ class AuthRepository {
     return UserResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await _dio.post('/auth/forgot-password', data: {'email': email});
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final response = await _dio.post('/auth/change-password', data: {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+      'confirm_password': confirmPassword,
+    });
+    return response.data as Map<String, dynamic>;
+  }
+
   SecureStorage get storage => _storage;
 
   Future<bool> hasToken() async {
