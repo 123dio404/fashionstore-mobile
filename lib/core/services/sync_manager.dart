@@ -51,6 +51,8 @@ class SyncManager {
   final ValueNotifier<List<Map<String, dynamic>>> queue =
       ValueNotifier<List<Map<String, dynamic>>>(const []);
 
+  int? _activeTenantId;
+
   Timer? _periodicSyncTimer;
 
   void _init() {
@@ -74,6 +76,10 @@ class SyncManager {
     }
   }
 
+  void setActiveTenantId(int? tenantId) {
+    _activeTenantId = tenantId;
+  }
+
   Future<void> refreshPendingCount() async {
     try {
       pendingCount.value = await _db.countPending();
@@ -88,6 +94,7 @@ class SyncManager {
 
   /// Registra una venta en modo offline generando un UUID v4 idempotente (RNF05).
   Future<String> recordOfflineSale({
+    required int tenantId,
     required int branchId,
     int? clientId,
     required List<Map<String, dynamic>> items,
@@ -98,6 +105,7 @@ class SyncManager {
     final uuid = _uuid.v4();
     final normalized = _normalizeItems(items);
     final payload = {
+      'tenant_id': tenantId,
       'branch_id': branchId,
       'client_id': clientId,
       'total': total ?? _totalOf(normalized),
@@ -132,6 +140,7 @@ class SyncManager {
   /// `scheduledAt` es la fecha/hora elegida por el cliente: el backend de sync
   /// usa `created_at` como fecha de la reserva.
   Future<String> recordOfflineReservation({
+    required int tenantId,
     required int branchId,
     int? clientId,
     required List<Map<String, dynamic>> items,
@@ -141,6 +150,7 @@ class SyncManager {
     final uuid = _uuid.v4();
     final normalized = _normalizeItems(items);
     final payload = {
+      'tenant_id': tenantId,
       'branch_id': branchId,
       'client_id': clientId,
       'total': total ?? _totalOf(normalized),
@@ -186,9 +196,27 @@ class SyncManager {
   Future<SyncResult?> syncAll() async {
     if (isSyncing.value) return null;
 
-    final pending = await _db.getPendingQueue();
-    if (pending.isEmpty) {
+    final allPending = await _db.getPendingQueue();
+    if (allPending.isEmpty) {
       pendingCount.value = 0;
+      await refreshQueue();
+      return null;
+    }
+
+    final tenantId = _activeTenantId;
+    if (tenantId == null || tenantId <= 0) {
+      lastError.value = 'Inicia sesión en una empresa para sincronizar las operaciones offline.';
+      return null;
+    }
+    final pending = allPending.where((row) {
+      final payload = row['payload_data'];
+      return payload is Map && payload['tenant_id'] == tenantId;
+    }).toList();
+    if (pending.isEmpty) {
+      if (allPending.isNotEmpty) {
+        lastError.value =
+            'Hay operaciones offline de otra empresa o sin tenant asociado. Inicia sesión en la empresa correspondiente para sincronizarlas.';
+      }
       await refreshQueue();
       return null;
     }

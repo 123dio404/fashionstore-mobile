@@ -101,6 +101,7 @@ class AppState extends ChangeNotifier {
 
   void setCurrentUser(UserResponse? user) {
     _currentUser = user;
+    syncManager.setActiveTenantId(user?.tenantId);
     notifyListeners();
   }
 
@@ -477,8 +478,11 @@ class AppState extends ChangeNotifier {
         setToast(
           'Venta guardada en el dispositivo; no se pudo asociar al inventario central.',
         );
+      } else if ((_currentUser?.tenantId ?? 0) <= 0) {
+        setToast('Inicia sesión en una empresa para guardar la venta offline.');
       } else {
         final uuid = await syncManager.recordOfflineSale(
+          tenantId: _currentUser!.tenantId!,
           branchId: targetBranchId,
           clientId: _currentUser?.id,
           items: items,
@@ -634,8 +638,11 @@ class AppState extends ChangeNotifier {
 
     if (_isOffline) {
       final targetBranchId = branchId ?? resolveBranchId(r.store);
-      if (stockId != null && stockId > 0) {
+      if ((_currentUser?.tenantId ?? 0) <= 0) {
+        setToast('Inicia sesión en una empresa para guardar la reserva offline.');
+      } else if (stockId != null && stockId > 0) {
         final uuid = await syncManager.recordOfflineReservation(
+          tenantId: _currentUser!.tenantId!,
           branchId: targetBranchId,
           clientId: _currentUser?.id,
           items: [
