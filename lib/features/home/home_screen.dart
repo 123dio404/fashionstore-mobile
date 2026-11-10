@@ -10,7 +10,6 @@ import '../../../shared/kit/cart_widgets.dart';
 import '../../../shared/kit/chips.dart';
 import '../../../shared/kit/net_image.dart';
 import '../../../shared/kit/product_card.dart';
-import '../../../shared/kit/states.dart';
 
 /// Inicio: saludo, buscador, categorías, banners, destacados y grilla.
 class HomeScreen extends StatefulWidget {
@@ -102,12 +101,39 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'Bienvenida de nuevo',
                       style: AppTextStyles.bodySize(
-                        12,
+                        11,
                         color: AppColors.muted,
                         letterSpacing: 0.5,
                       ),
                     ),
-                    Text('FashionStore', style: AppTextStyles.displaySize(24)),
+                    const SizedBox(height: 2),
+                    GestureDetector(
+                      onTap: () => _openStoreSelector(s),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.storefront_outlined, size: 16, color: AppColors.accent),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                s.selectedTenantName,
+                                style: AppTextStyles.bodySize(14, weight: FontWeight.w700),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.arrow_drop_down, size: 18, color: AppColors.dark),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -217,15 +243,105 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  Widget _categories() => SizedBox(
+  void _openStoreSelector(AppState s) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'SELECCIONA UNA TIENDA',
+                      style: AppTextStyles.bodySize(11,
+                          color: AppColors.muted,
+                          weight: FontWeight.w700,
+                          letterSpacing: 0.7),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 320,
+                  child: ListView.separated(
+                    itemCount: AppState.kDefaultStores.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (_, idx) {
+                      final store = AppState.kDefaultStores[idx];
+                      final isSelected = store['id'] == s.selectedTenantId;
+                      return ListTile(
+                        leading: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.accent : AppColors.borderLight,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.storefront,
+                            size: 20,
+                            color: isSelected ? Colors.white : AppColors.dark,
+                          ),
+                        ),
+                        title: Text(
+                          store['name'] as String,
+                          style: AppTextStyles.bodySize(14,
+                              weight: isSelected ? FontWeight.bold : FontWeight.w500),
+                        ),
+                        subtitle: Text(
+                          '${store['category']} · Plan ${store['plan']}',
+                          style: AppTextStyles.bodySize(11, color: AppColors.muted),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle, color: AppColors.accent, size: 20)
+                            : null,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          s.changeSelectedStore(
+                            tenantId: store['id'] as int,
+                            tenantName: store['name'] as String,
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _categories() {
+    final s = AppScope.of(context);
+    final catList = ['Todos', ...s.products.map((p) => p.category).toSet(), 'Ofertas'];
+
+    return SizedBox(
         height: 34,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: kCategories.length,
+          itemCount: catList.length,
           separatorBuilder: (_, __) => const SizedBox(width: 8),
           itemBuilder: (_, i) {
-            final c = kCategories[i];
+            final c = catList[i];
             return PillChip(
               label: c,
               selected: _category == c,
@@ -235,6 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       );
+  }
 
   Widget _fab(AppState s) => Material(
         color: AppColors.dark,

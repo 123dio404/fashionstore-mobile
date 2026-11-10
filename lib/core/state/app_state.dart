@@ -10,6 +10,7 @@ import '../../features/catalog/data/models/catalog_models.dart';
 import '../../features/commerce/data/commerce_repository.dart';
 import '../data/mock_data.dart';
 import '../models/fashion_models.dart';
+import '../network/api_client.dart';
 import '../services/sync_manager.dart';
 import '../storage/local_database.dart';
 
@@ -57,11 +58,137 @@ class AppState extends ChangeNotifier {
   String? _toast;
   Timer? _toastTimer;
 
+  int? _selectedTenantId = 3;
+  String _selectedTenantName = 'Moda Urbana S.A.';
+  NotificationItem? _activePushBanner;
+  Timer? _pushDismissTimer;
+  Timer? _notifPollTimer;
+
+  static const List<Map<String, dynamic>> kDefaultStores = [
+    {'id': 3, 'name': 'Moda Urbana S.A.', 'slug': 'urban-style', 'category': 'Streetwear & Casual', 'plan': 'Básico'},
+    {'id': 5, 'name': 'Mundo Medias S.R.L.', 'slug': 'mundo-medias', 'category': 'Calcetería & Térmicos', 'plan': 'Básico'},
+    {'id': 6, 'name': 'Tenis Urbanos S.R.L.', 'slug': 'tenis-urbanos', 'category': 'Calzado & Sneakers', 'plan': 'Pro'},
+    {'id': 7, 'name': 'SportActive Ropa Deportiva', 'slug': 'sport-active', 'category': 'Ropa Técnica Deportiva', 'plan': 'Básico'},
+    {'id': 4, 'name': 'Elegance Boutique S.R.L.', 'slug': 'elegance-fashion', 'category': 'Alta Costura & Gala', 'plan': 'Enterprise'},
+    {'id': 8, 'name': 'Denim Co. Jeans Factory', 'slug': 'denim-co', 'category': 'Jeans & Denim', 'plan': 'Pro'},
+    {'id': 9, 'name': 'Relax Homewear & Pijamas', 'slug': 'relax-homewear', 'category': 'Pijamas & Hogar', 'plan': 'Básico'},
+    {'id': 10, 'name': 'Sartoria Milán Bespoke', 'slug': 'sartoria-milan', 'category': 'Sastrería & Trajes', 'plan': 'Enterprise'},
+    {'id': 11, 'name': 'Nordic Winter & Coats', 'slug': 'nordic-winter', 'category': 'Abrigos & Parkas', 'plan': 'Pro'},
+  ];
+
+  static String resolveProductImage(String name) {
+    final n = name.toLowerCase();
+    // Calcetines y medias
+    if (n.contains('media') || n.contains('calcet') || n.contains('panti') || n.contains('tobillera')) {
+      if (n.contains('compresion') || n.contains('compresión')) {
+        return 'https://images.unsplash.com/photo-1582966772680-860e372bb558?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('termica') || n.contains('térmica') || n.contains('polar')) {
+        return 'https://images.unsplash.com/photo-1544441893-675973e31985?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('invisible')) {
+        return 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800&auto=format&fit=crop&q=80';
+      }
+      return 'https://images.unsplash.com/photo-1582966772680-860e372bb558?w=800&auto=format&fit=crop&q=80';
+    }
+    // Tenis y calzado
+    if (n.contains('tenis') || n.contains('sneaker') || n.contains('running') || n.contains('skate') || n.contains('zapatilla')) {
+      if (n.contains('running') || n.contains('boost')) {
+        return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('court') || n.contains('vintage')) {
+        return 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('skate') || n.contains('canvas')) {
+        return 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('plataforma') || n.contains('chunky')) {
+        return 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80';
+      }
+      return 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=800&auto=format&fit=crop&q=80';
+    }
+    // Ropa deportiva / SportActive
+    if (n.contains('dry-fit') || n.contains('seamless') || n.contains('legging') || n.contains('deportiv') || n.contains('top deportivo')) {
+      if (n.contains('legging')) {
+        return 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('short')) {
+        return 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('top')) {
+        return 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop&q=80';
+      }
+      return 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80';
+    }
+    // Jeans / Denim Co.
+    if (n.contains('jeans') || n.contains('denim') || n.contains('cazadora denim') || n.contains('vaquera')) {
+      if (n.contains('slim')) {
+        return 'https://images.unsplash.com/photo-1542272604-780c96856592?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('mom') || n.contains('vintage')) {
+        return 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&auto=format&fit=crop&q=80';
+      }
+      if (n.contains('cazadora') || n.contains('chaqueta')) {
+        return 'https://images.unsplash.com/photo-1603189343302-e603f7add05a?w=800&auto=format&fit=crop&q=80';
+      }
+      return 'https://images.unsplash.com/photo-1582418702059-97ebafb35d09?w=800&auto=format&fit=crop&q=80';
+    }
+    // Alta Costura / Trajes / Elegance Boutique
+    if (n.contains('vestido') || n.contains('gala') || n.contains('seda royale') || n.contains('sirena')) {
+      if (n.contains('sirena') || n.contains('corset')) {
+        return 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=800&auto=format&fit=crop&q=80';
+      }
+      return 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=800&auto=format&fit=crop&q=80';
+    }
+    if (n.contains('traje') || n.contains('smoking') || n.contains('príncipe') || n.contains('sartoria')) {
+      return 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80';
+    }
+    // Abrigos / Nordic Winter
+    if (n.contains('gabardina') || n.contains('parka') || n.contains('abrigo') || n.contains('chaquetón')) {
+      return 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&auto=format&fit=crop&q=80';
+    }
+    // Pijamas / Relax Homewear
+    if (n.contains('pijama') || n.contains('bata') || n.contains('fleece') || n.contains('pantuflas')) {
+      return 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=80';
+    }
+    // Streetwear / Moda Urbana
+    if (n.contains('hoodie') || n.contains('sudadera')) {
+      return 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800&auto=format&fit=crop&q=80';
+    }
+    if (n.contains('cargo') || n.contains('pantalon') || n.contains('pantalón')) {
+      return 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&auto=format&fit=crop&q=80';
+    }
+    if (n.contains('oxford') || n.contains('camisa')) {
+      return 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&auto=format&fit=crop&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800&auto=format&fit=crop&q=80';
+  }
+
+  static String resolveProductCategory(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('media') || n.contains('calcet') || n.contains('panti') || n.contains('tobillera')) return 'Calcetería';
+    if (n.contains('tenis') || n.contains('sneaker') || n.contains('running') || n.contains('skate') || n.contains('zapatilla')) return 'Calzado';
+    if (n.contains('dry-fit') || n.contains('seamless') || n.contains('legging') || n.contains('deportiv') || n.contains('top deportivo')) return 'Deportivo';
+    if (n.contains('jeans') || n.contains('denim')) return 'Jeans & Denim';
+    if (n.contains('traje') || n.contains('smoking') || n.contains('sartoria')) return 'Sastrería';
+    if (n.contains('vestido') || n.contains('gala') || n.contains('sirena')) return 'Alta Costura';
+    if (n.contains('gabardina') || n.contains('parka') || n.contains('abrigo')) return 'Abrigos';
+    if (n.contains('pijama') || n.contains('bata') || n.contains('fleece') || n.contains('pantuflas')) return 'Homewear';
+    if (n.contains('hoodie') || n.contains('cargo') || n.contains('oxford') || n.contains('camisa')) return 'Streetwear';
+    return 'Moda';
+  }
+
   AppState() {
     syncManager.isOnline.addListener(_handleOnlineChanged);
     syncManager.pendingCount.addListener(notifyListeners);
     syncManager.isSyncing.addListener(notifyListeners);
     unawaited(_loadCachedCatalog());
+
+    _notifPollTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (!_isOffline && _currentUser != null) {
+        fetchNotificationsFromRemote();
+      }
+    });
   }
 
   void _handleOnlineChanged() {
@@ -72,6 +199,8 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     _toastTimer?.cancel();
+    _pushDismissTimer?.cancel();
+    _notifPollTimer?.cancel();
     syncManager.isOnline.removeListener(_handleOnlineChanged);
     syncManager.pendingCount.removeListener(notifyListeners);
     syncManager.isSyncing.removeListener(notifyListeners);
@@ -94,15 +223,55 @@ class AppState extends ChangeNotifier {
   bool get isOffline => _isOffline;
   String? get toast => _toast;
 
+  int? get selectedTenantId => _selectedTenantId ?? _currentUser?.tenantId ?? 3;
+  String get selectedTenantName => _selectedTenantName;
+  NotificationItem? get activePushBanner => _activePushBanner;
+
+  bool get isAdmin => _currentUser?.role == Role.administrador;
+  bool get isCashier => _currentUser?.role == Role.cajero;
+  bool get isCustomer => _currentUser?.role == Role.cliente || _currentUser == null;
+
   int get cartCount => _cart.fold(0, (sum, i) => sum + i.qty);
   int get reservCount =>
       _reservations.where((r) => r.status == 'confirmada').length;
   int get favCount => _favs.length;
 
+  void triggerPushBanner(NotificationItem item) {
+    _activePushBanner = item;
+    _pushDismissTimer?.cancel();
+    _pushDismissTimer = Timer(const Duration(seconds: 6), () {
+      _activePushBanner = null;
+      notifyListeners();
+    });
+    notifyListeners();
+  }
+
+  void dismissPushBanner() {
+    _pushDismissTimer?.cancel();
+    _activePushBanner = null;
+    notifyListeners();
+  }
+
   void setCurrentUser(UserResponse? user) {
     _currentUser = user;
     syncManager.setActiveTenantId(user?.tenantId);
+    if (user != null && user.tenantId != null) {
+      _selectedTenantId = user.tenantId;
+      _selectedTenantName = user.tenantName ?? 'Empresa #${user.tenantId}';
+    } else if (user != null && user.role == Role.cliente) {
+      _selectedTenantId ??= 3;
+      _selectedTenantName = 'Moda Urbana S.A.';
+    }
     notifyListeners();
+  }
+
+  Future<void> changeSelectedStore({required int tenantId, required String tenantName}) async {
+    _selectedTenantId = tenantId;
+    _selectedTenantName = tenantName;
+    _cart.clear();
+    notifyListeners();
+    await refreshStockFromRemote(tenantId: tenantId);
+    setToast('Tienda seleccionada: $tenantName');
   }
 
   void setSearchQuery(String q) {
@@ -115,11 +284,12 @@ class AppState extends ChangeNotifier {
   ///
   /// Además guarda una instantánea en SQLite para que catálogo, carrito, ventas y
   /// reservas sigan operando sin conexión (CU-09, CU-12, CU-15).
-  Future<void> refreshStockFromRemote({CatalogRepository? catalogRepo}) async {
+  Future<void> refreshStockFromRemote({CatalogRepository? catalogRepo, int? tenantId}) async {
     final repo = catalogRepo ?? _catalogRepo;
+    final targetTenant = tenantId ?? _selectedTenantId ?? _currentUser?.tenantId ?? 3;
     try {
       final branches = await repo.branches();
-      final apiProducts = await repo.products();
+      final apiProducts = await repo.products(tenantId: targetTenant);
       final stocks = await repo.inventoryStock();
       List<Map<String, dynamic>> sizes = const [];
       try {
@@ -130,41 +300,73 @@ class AppState extends ChangeNotifier {
       _apiStocks = stocks;
       _variants = _buildVariants(apiProducts, sizes);
 
-      _products = _products.map((p) {
-        final apiProd = apiProducts.cast<ProductResponse?>().firstWhere(
-              (ap) =>
-                  ap != null &&
-                  (ap.name.trim().toLowerCase() == p.name.trim().toLowerCase() ||
-                      ap.id == p.id),
-              orElse: () => null,
-            );
-        if (apiProd == null) return p;
+      if (apiProducts.isNotEmpty) {
+        _products = apiProducts.map((ap) {
+          final variantIds = ap.variants.map((v) => v.id).toSet();
+          final newStockMap = <String, int>{};
 
-        final variantIds = apiProd.variants.map((v) => v.id).toSet();
-        final newStockMap = Map<String, int>.from(p.stock);
+          for (final branch in branches) {
+            final bKey = branch.name
+                .replaceFirst(RegExp(r'^Sucursal\s+', caseSensitive: false), '')
+                .trim();
+            final branchTotal = stocks
+                .where((s) =>
+                    (s['branch_id'] == branch.id) &&
+                    variantIds.contains(s['variant_id']))
+                .fold<int>(0, (sum, s) {
+              final avail = (s['available_stock'] as num?)?.toInt() ?? 0;
+              return sum + (avail > 0 ? avail : 0);
+            });
 
-        for (final branch in branches) {
-          final bKey = branch.name
-              .replaceFirst(RegExp(r'^Sucursal\s+', caseSensitive: false), '')
-              .trim();
-          final branchTotal = stocks
-              .where((s) =>
-                  (s['branch_id'] == branch.id) &&
-                  variantIds.contains(s['variant_id']))
-              .fold<int>(0, (sum, s) {
-            final avail = (s['available_stock'] as num?)?.toInt() ?? 0;
-            return sum + (avail > 0 ? avail : 0);
-          });
+            newStockMap[bKey] = branchTotal;
+            final capitalized = bKey.isNotEmpty
+                ? bKey[0].toUpperCase() + bKey.substring(1).toLowerCase()
+                : bKey;
+            newStockMap[capitalized] = branchTotal;
+          }
 
-          newStockMap[bKey] = branchTotal;
-          final capitalized = bKey.isNotEmpty
-              ? bKey[0].toUpperCase() + bKey.substring(1).toLowerCase()
-              : bKey;
-          newStockMap[capitalized] = branchTotal;
-        }
+          final pSizes = ap.variants
+              .map((v) => sizes.firstWhere(
+                    (sz) => sz['id'] == v.sizeId,
+                    orElse: () => {'name': 'U'},
+                  )['name']?.toString() ?? 'U')
+              .toSet()
+              .toList();
+          if (pSizes.isEmpty) pSizes.addAll(['S', 'M', 'L']);
 
-        return p.copyWith(stock: newStockMap);
-      }).toList();
+          final image = resolveProductImage(ap.name);
+          final cat = resolveProductCategory(ap.name);
+
+          return Product(
+            id: ap.id,
+            name: ap.name,
+            brand: _selectedTenantName,
+            category: cat,
+            price: ap.price,
+            oldPrice: ap.price * 1.15,
+            discount: (ap.discountPercentage ?? 0).toInt(),
+            image: image,
+            images: [image],
+            colors: const [
+              ProductColor('Negro', '#111827'),
+              ProductColor('Gris', '#6B7280'),
+              ProductColor('Blanco', '#FFFFFF'),
+            ],
+            sizes: pSizes,
+            description: ap.description ??
+                'Prenda de confección de alta calidad con diseño exclusivo de $_selectedTenantName.',
+            stock: newStockMap,
+            rating: 4.9,
+            reviews: 18,
+            isNew: true,
+            isFeatured: true,
+            model3dUrl: ap.model3dUrl,
+            model3dFormat: 'glb',
+          );
+        }).toList();
+      }
+
+      await fetchNotificationsFromRemote();
 
       await _persistCatalog(branches, stocks);
       _remoteCatalogLoaded = true;
@@ -476,7 +678,7 @@ class AppState extends ChangeNotifier {
       final items = saleItems ?? _resolveSaleItems(p, targetBranchId);
       if (items.isEmpty) {
         setToast(
-          'Venta guardada en el dispositivo; no se pudo asociar al inventario central.',
+          'Venta guardada offline en el dispositivo; pendiente de sincronización.',
         );
       } else if ((_currentUser?.tenantId ?? 0) <= 0) {
         setToast('Inicia sesión en una empresa para guardar la venta offline.');
@@ -535,6 +737,40 @@ class AppState extends ChangeNotifier {
   void clearNotifications() {
     _notifications.clear();
     notifyListeners();
+  }
+
+  /// Recupera las notificaciones reales del usuario desde el servidor SaaS
+  Future<void> fetchNotificationsFromRemote() async {
+    try {
+      final dio = ApiClient().dio;
+      final res = await dio.get('/notifications/me');
+      if (res.data is List) {
+        final list = (res.data as List).map((raw) {
+          final m = raw as Map<String, dynamic>;
+          return NotificationItem(
+            id: m['id']?.toString() ?? UniqueKey().toString(),
+            title: m['title']?.toString() ?? 'Aviso',
+            message: m['message']?.toString() ?? '',
+            date: m['created_at'] != null ? '${m['created_at']}'.split('T').first : 'Hoy',
+            type: m['channel']?.toString() ?? 'info',
+            isRead: m['is_read'] as bool? ?? false,
+          );
+        }).toList();
+
+        if (list.isNotEmpty) {
+          final existingIds = _notifications.map((n) => n.id).toSet();
+          final newUnread = list.where((n) => !n.isRead && !existingIds.contains(n.id)).toList();
+
+          _notifications.clear();
+          _notifications.addAll(list);
+
+          if (newUnread.isNotEmpty) {
+            triggerPushBanner(newUnread.first);
+          }
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> Function()? onLogout;
