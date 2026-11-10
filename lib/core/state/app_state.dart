@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -76,20 +77,103 @@ class AppState extends ChangeNotifier {
     {'id': 11, 'name': 'Nordic Winter & Coats', 'slug': 'nordic-winter', 'category': 'Abrigos & Parkas', 'plan': 'Pro'},
   ];
 
+  static final Map<String, String> _exactProductImages = {
+    // ── Moda Urbana S.A. (Tenant 3) ──
+    'camisa oxford streetwear': 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&auto=format&fit=crop&q=80',
+    'chaqueta denim retro': 'https://images.unsplash.com/photo-1603189343302-e603f7add05a?w=800&auto=format&fit=crop&q=80',
+    'hoodie gráfico streetwear': 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800&auto=format&fit=crop&q=80',
+    'pantalón cargo urbano': 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&auto=format&fit=crop&q=80',
+    'remera oversize graphic lab': 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800&auto=format&fit=crop&q=80',
+    'rompevientos windbreaker techwear': 'https://images.unsplash.com/photo-1544441893-675973e31985?w=800&auto=format&fit=crop&q=80',
+    'jogger baggy streetwear': 'https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=800&auto=format&fit=crop&q=80',
+    'gorra urbana trucker edition': 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800&auto=format&fit=crop&q=80',
+
+    // ── Elegance Boutique S.R.L. (Tenant 4) ──
+    'vestido de gala seda royale': 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=800&auto=format&fit=crop&q=80',
+    'traje ejecutivo italiano': 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80',
+    'smoking ceremonia black tie': 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80',
+    'vestido sirena escote corset': 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=800&auto=format&fit=crop&q=80',
+    'abrigo de cachemira imperial': 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&auto=format&fit=crop&q=80',
+    'blazer doble botonadura sartorial': 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=800&auto=format&fit=crop&q=80',
+    'vestido midi plisado champagne': 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80',
+    'blusa de seda crepe organza': 'https://images.unsplash.com/photo-1551803091-e20673f15770?w=800&auto=format&fit=crop&q=80',
+
+    // ── Mundo Medias S.R.L. (Tenant 5) ──
+    'medias tobilleras deportivas (pack x3)': 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800&auto=format&fit=crop&q=80',
+    'medias de compresión graduada': 'https://images.unsplash.com/photo-1582966772680-860e372bb558?w=800&auto=format&fit=crop&q=80',
+    'medias térmicas polar de invierno': 'https://images.unsplash.com/photo-1646725582781-c09e1bcd431d?w=800&auto=format&fit=crop&q=80',
+    'medias invisibles antideslizantes': 'https://images.unsplash.com/photo-1585499583264-491df5142e83?w=800&auto=format&fit=crop&q=80',
+    'pantis de seda fina elegance': 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&auto=format&fit=crop&q=80',
+    'medias ejecutivas hilo de escocia': 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=800&auto=format&fit=crop&q=80',
+    'calcetines lana merino senderismo': 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=800&auto=format&fit=crop&q=80',
+    'medias bucaneras canalé algodón': 'https://images.unsplash.com/photo-1516762689617-e1cffcef479d?w=800&auto=format&fit=crop&q=80',
+
+    // ── Tenis Urbanos S.R.L. (Tenant 6) ──
+    'tenis running boost pro': 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80',
+    'tenis court vintage leather': 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800&auto=format&fit=crop&q=80',
+    'tenis skate canvas low': 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800&auto=format&fit=crop&q=80',
+    'tenis plataforma chunky bold': 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80',
+    'tenis trail all-terrain outdoor': 'https://images.unsplash.com/photo-1551107696-a4b085a6d91a?w=800&auto=format&fit=crop&q=80',
+
+    // ── SportActive Ropa Deportiva (Tenant 7) ──
+    'remera técnica dry-fit pro': 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80',
+    'leggings seamless alta compresión': 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&auto=format&fit=crop&q=80',
+    'short running 2 en 1 con bolsillo': 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=800&auto=format&fit=crop&q=80',
+    'top deportivo alto impacto': 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop&q=80',
+    'cortaviento running ultraligero': 'https://images.unsplash.com/photo-1516826957135-700dedea698c?w=800&auto=format&fit=crop&q=80',
+
+    // ── Denim Co. Jeans Factory (Tenant 8) ──
+    'jeans slim fit índigo clásico': 'https://images.unsplash.com/photo-1542272604-780c96856592?w=800&auto=format&fit=crop&q=80',
+    'jeans mom fit vintage celeste': 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&auto=format&fit=crop&q=80',
+    'cazadora denim forro sherpa': 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=800&auto=format&fit=crop&q=80',
+    'falda midi denim abotonada': 'https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=800&auto=format&fit=crop&q=80',
+    'overol denim carpenter tradicional': 'https://images.unsplash.com/photo-1538329972958-465d6d2144ed?w=800&auto=format&fit=crop&q=80',
+
+    // ── Relax Homewear & Pijamas (Tenant 9) ──
+    'pijama franela cuadros invierno': 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
+    'bata kimono satén seda royale': 'https://images.unsplash.com/photo-1582533561751-ef6f6ab93a2e?w=800&auto=format&fit=crop&q=80',
+    'conjunto soft fleece confort': 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=80',
+    'pantuflas nordic acolchadas': 'https://images.unsplash.com/photo-1595341888016-a392ef81b7de?w=800&auto=format&fit=crop&q=80',
+    'short pijama modal transpirable': 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=800&auto=format&fit=crop&q=80',
+
+    // ── Sartoria Milán Bespoke (Tenant 10) ──
+    'traje 3 piezas príncipe de gales': 'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=800&auto=format&fit=crop&q=80',
+    'smoking solapa chal velvet black tie': 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80',
+    'blazer doble botonadura navy wool': 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=800&auto=format&fit=crop&q=80',
+    'camisa cuello francés hilo doble 120s': 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&auto=format&fit=crop&q=80',
+    'pantalón sartorial pliegues tiro alto': 'https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?w=800&auto=format&fit=crop&q=80',
+
+    // ── Nordic Winter & Coats (Tenant 11) ──
+    'gabardina trench coat impermeable': 'https://images.unsplash.com/photo-1544441893-675973e31985?w=800&auto=format&fit=crop&q=80',
+    'parka plumífero expedition térmica': 'https://images.unsplash.com/photo-1548883354-7622d03aca27?w=800&auto=format&fit=crop&q=80',
+    'chaquetón doble faz lana merino': 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&auto=format&fit=crop&q=80',
+    'abrigo imperial cachemira italiana': 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
+    'bufanda alpaca suri tejida a mano': 'https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?w=800&auto=format&fit=crop&q=80',
+  };
+
   static String resolveProductImage(String name) {
-    final n = name.toLowerCase();
+    final key = name.trim().toLowerCase();
+    if (_exactProductImages.containsKey(key)) {
+      return _exactProductImages[key]!;
+    }
+    for (final entry in _exactProductImages.entries) {
+      if (key.contains(entry.key) || entry.key.contains(key)) {
+        return entry.value;
+      }
+    }
+    final n = key;
     // Calcetines y medias
     if (n.contains('media') || n.contains('calcet') || n.contains('panti') || n.contains('tobillera')) {
       if (n.contains('compresion') || n.contains('compresión')) {
         return 'https://images.unsplash.com/photo-1582966772680-860e372bb558?w=800&auto=format&fit=crop&q=80';
       }
       if (n.contains('termica') || n.contains('térmica') || n.contains('polar')) {
-        return 'https://images.unsplash.com/photo-1544441893-675973e31985?w=800&auto=format&fit=crop&q=80';
+        return 'https://images.unsplash.com/photo-1646725582781-c09e1bcd431d?w=800&auto=format&fit=crop&q=80';
       }
-      if (n.contains('invisible')) {
-        return 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800&auto=format&fit=crop&q=80';
+      if (n.contains('invisible') || n.contains('antideslizante')) {
+        return 'https://images.unsplash.com/photo-1585499583264-491df5142e83?w=800&auto=format&fit=crop&q=80';
       }
-      return 'https://images.unsplash.com/photo-1582966772680-860e372bb558?w=800&auto=format&fit=crop&q=80';
+      return 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800&auto=format&fit=crop&q=80';
     }
     // Tenis y calzado
     if (n.contains('tenis') || n.contains('sneaker') || n.contains('running') || n.contains('skate') || n.contains('zapatilla')) {
@@ -184,9 +268,30 @@ class AppState extends ChangeNotifier {
     syncManager.isSyncing.addListener(notifyListeners);
     unawaited(_loadCachedCatalog());
 
+    _startConnectivityMonitor();
+
     _notifPollTimer = Timer.periodic(const Duration(seconds: 12), (_) {
       if (!_isOffline && _currentUser != null) {
         fetchNotificationsFromRemote();
+      }
+    });
+  }
+
+  Timer? _connectivityPollTimer;
+
+  void _startConnectivityMonitor() {
+    _connectivityPollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      try {
+        final result = await InternetAddress.lookup('google.com')
+            .timeout(const Duration(milliseconds: 1800));
+        final online = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+        if (online != syncManager.isOnline.value) {
+          syncManager.setOnlineStatus(online);
+        }
+      } catch (_) {
+        if (syncManager.isOnline.value) {
+          syncManager.setOnlineStatus(false);
+        }
       }
     });
   }
@@ -201,6 +306,7 @@ class AppState extends ChangeNotifier {
     _toastTimer?.cancel();
     _pushDismissTimer?.cancel();
     _notifPollTimer?.cancel();
+    _connectivityPollTimer?.cancel();
     syncManager.isOnline.removeListener(_handleOnlineChanged);
     syncManager.pendingCount.removeListener(notifyListeners);
     syncManager.isSyncing.removeListener(notifyListeners);
@@ -676,22 +782,26 @@ class AppState extends ChangeNotifier {
 
     if (mustQueue) {
       final items = saleItems ?? _resolveSaleItems(p, targetBranchId);
-      if (items.isEmpty) {
-        setToast(
-          'Venta guardada offline en el dispositivo; pendiente de sincronización.',
-        );
-      } else if ((_currentUser?.tenantId ?? 0) <= 0) {
-        setToast('Inicia sesión en una empresa para guardar la venta offline.');
-      } else {
-        final uuid = await syncManager.recordOfflineSale(
-          tenantId: _currentUser!.tenantId!,
-          branchId: targetBranchId,
-          clientId: _currentUser?.id,
-          items: items,
-          total: p.total,
-        );
-        setToast('Venta guardada offline (UUID: ${uuid.substring(0, 8)})');
-      }
+      final targetTenantId = _currentUser?.tenantId ?? _selectedTenantId ?? 3;
+      final queueItems = items.isNotEmpty
+          ? items
+          : [
+              for (final it in p.items)
+                {
+                  'stock_id': (it.productId > 0 ? it.productId : 1),
+                  'quantity': it.qty,
+                  'unit_price': it.price,
+                }
+            ];
+
+      final uuid = await syncManager.recordOfflineSale(
+        tenantId: targetTenantId,
+        branchId: targetBranchId,
+        clientId: _currentUser?.id,
+        items: queueItems,
+        total: p.total,
+      );
+      setToast('Venta guardada offline (UUID: ${uuid.substring(0, 8)})');
     } else {
       unawaited(refreshStockFromRemote().catchError((_) {}));
       unawaited(syncRemoteSales().catchError((_) {}));
