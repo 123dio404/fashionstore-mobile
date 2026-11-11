@@ -93,6 +93,9 @@ class SyncManager {
   }
 
   /// Registra una venta en modo offline generando un UUID v4 idempotente (RNF05).
+  ///
+  /// RN-03: sin conexión solo se permite efectivo. Se rechaza cualquier otro
+  /// método para no encolar un cobro que la pasarela no pudo autorizar.
   Future<String> recordOfflineSale({
     required int tenantId,
     required int branchId,
@@ -102,14 +105,26 @@ class SyncManager {
     String paymentMethod = 'efectivo',
     DateTime? createdAt,
   }) async {
-    final uuid = _uuid.v4();
+    final requested = paymentMethod.trim().toLowerCase();
+    if (requested != 'efectivo' && requested != 'cash' && requested != 'contado') {
+      throw ArgumentError(
+        'Sin conexión solo se permiten ventas en efectivo (RN-03). '
+        'Conéctate para cobrar con tarjeta, QR o datáfono.',
+      );
+    }
     final normalized = _normalizeItems(items);
+    if (normalized.isEmpty) {
+      throw ArgumentError(
+        'La venta offline no tiene líneas válidas asociadas al inventario (stock_id).',
+      );
+    }
+    final uuid = _uuid.v4();
     final payload = {
       'tenant_id': tenantId,
       'branch_id': branchId,
       'client_id': clientId,
       'total': total ?? _totalOf(normalized),
-      'payment_method': paymentMethod,
+      'payment_method': 'efectivo',
       'items': normalized,
       'created_at': (createdAt ?? DateTime.now()).toIso8601String(),
     };

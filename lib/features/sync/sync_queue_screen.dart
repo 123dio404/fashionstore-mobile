@@ -230,6 +230,23 @@ class _QueueCard extends StatelessWidget {
               style: AppTextStyles.bodySize(11, color: AppColors.danger),
             ),
           ],
+          if (status == 'CONFLICTO') ...[
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Text(
+                'Otra venta confirmó primero la última unidad (RN-05). '
+                'El administrador debe resolver este conflicto: reembolsar al cliente '
+                'o reasignar stock si apareció disponibilidad. No reintentes el cobro.',
+                style: AppTextStyles.bodySize(10, color: AppColors.dark),
+              ),
+            ),
+          ],
           if (canDiscard) ...[
             const SizedBox(height: 6),
             Align(
@@ -237,7 +254,7 @@ class _QueueCard extends StatelessWidget {
               child: TextButton(
                 onPressed: onDiscard,
                 child: Text(
-                  status == 'CONFLICTO' ? 'Descartar conflicto' : 'Descartar',
+                  status == 'CONFLICTO' ? 'Quitar de la cola local' : 'Descartar',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

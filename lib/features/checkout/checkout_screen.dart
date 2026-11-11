@@ -291,61 +291,94 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     VoidCallback onTap, {
     Color? swatch,
     Widget? trailing,
+    bool enabled = true,
   }) =>
-      GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: active ? AppColors.dark : AppColors.borderLight,
-              width: 1.5,
-            ),
-            color: active ? AppColors.borderLight.withValues(alpha: 0.3) : AppColors.surface,
-          ),
-          child: Row(
-            children: [
-              if (swatch != null)
-                Container(
-                  width: 32,
-                  height: 20,
-                  margin: const EdgeInsets.only(right: 10),
-                  decoration: BoxDecoration(
-                    color: swatch,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                )
-              else
-                Icon(icon,
-                    size: 18,
-                    color: active ? AppColors.dark : AppColors.mutedLight),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(label,
-                    style:
-                        AppTextStyles.bodySize(13, weight: FontWeight.w600)),
+      Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: active ? AppColors.dark : AppColors.borderLight,
+                width: 1.5,
               ),
-              if (trailing != null) trailing,
-              if (active && trailing == null)
-                const Icon(Icons.check_circle, size: 18, color: AppColors.dark),
-            ],
+              color: active ? AppColors.borderLight.withValues(alpha: 0.3) : AppColors.surface,
+            ),
+            child: Row(
+              children: [
+                if (swatch != null)
+                  Container(
+                    width: 32,
+                    height: 20,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      color: swatch,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  )
+                else
+                  Icon(icon,
+                      size: 18,
+                      color: active ? AppColors.dark : AppColors.mutedLight),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(label,
+                      style:
+                          AppTextStyles.bodySize(13, weight: FontWeight.w600)),
+                ),
+                if (trailing != null) trailing,
+                if (active && trailing == null)
+                  const Icon(Icons.check_circle, size: 18, color: AppColors.dark),
+              ],
+            ),
           ),
         ),
       );
 
   List<Widget> _paymentStep(AppState s) {
     final total = s.cartSubtotal + (_delivery == 'home' ? 4.99 : 0.0);
+    // RN-03: sin conexión la app solo puede cobrar en efectivo.
+    final offline = s.isOffline;
+    final payMethod = offline ? 'cash' : _payMethod;
     return [
       _card('Método de pago (Stripe & Efectivo)', [
+        if (offline)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.wifi_off, size: 18, color: AppColors.warning),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Sin conexión: solo se permite efectivo (RN-03). '
+                    'Tarjeta y QR requieren internet; la venta quedará pendiente de sincronizar.',
+                    style: AppTextStyles.bodySize(11, color: AppColors.dark),
+                  ),
+                ),
+              ],
+            ),
+          ),
         _radioRow(
-          _payMethod == 'card',
+          payMethod == 'card',
           'Tarjeta de crédito / débito (Stripe)',
           Icons.credit_card,
           () => setState(() => _payMethod = 'card'),
+          enabled: !offline,
         ),
-        if (_payMethod == 'card')
+        if (payMethod == 'card')
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 8),
             child: Column(
@@ -376,15 +409,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
         _radioRow(
-          _payMethod == 'qr',
+          payMethod == 'qr',
           'Stripe QR (Escaneo dinámico)',
           Icons.qr_code_2,
           () {
             setState(() => _payMethod = 'qr');
             _loadQr(total);
           },
+          enabled: !offline,
         ),
-        if (_payMethod == 'qr')
+        if (payMethod == 'qr')
           Container(
             width: double.infinity,
             margin: const EdgeInsets.symmetric(vertical: 8),
@@ -451,8 +485,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
         _radioRow(
-          _payMethod == 'cash',
-          'Efectivo (Pago en tienda o contra entrega)',
+          payMethod == 'cash',
+          offline
+              ? 'Efectivo (obligatorio sin conexión)'
+              : 'Efectivo (Pago en tienda o contra entrega)',
           Icons.payments_outlined,
           () => setState(() => _payMethod = 'cash'),
         ),
@@ -561,9 +597,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
 
     final selectedCard = _cards.firstWhere((c) => c.$1 == _cardId, orElse: () => _cards.first);
-    final isCard = _payMethod == 'card';
-    final isQr = _payMethod == 'qr';
-    final isCash = _payMethod == 'cash';
+    // RN-03: si el dispositivo está sin conexión, se fuerza efectivo sin
+    // importar qué método estaba seleccionado antes de perder la red.
+    final isCash = s.isOffline || _payMethod == 'cash';
+    final isCard = !s.isOffline && _payMethod == 'card';
+    final isQr = !s.isOffline && _payMethod == 'qr';
+    final effectiveMethod =
+        isCash ? 'Efectivo en tienda / entrega' : (isQr ? 'Stripe QR' : method);
     final simulateRejection = isCard && selectedCard.$5;
 
     // Caso 1: Prueba de rechazo simulado por tarjeta declinada (CU11)
@@ -710,17 +750,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       subtotal: finalSubtotal,
       shipping: shipping,
       paymentMethod:
-          pendingSync ? '$method · pendiente de sincronizar' : 'Aprobado · $transactionRef',
+          pendingSync ? '$effectiveMethod · pendiente de sincronizar' : 'Aprobado · $transactionRef',
       deliveryMethod: delivery,
       store: delivery == 'pickup' ? storeName : null,
       items: items,
       pendingSync: pendingSync,
     );
-    await s.completePurchase(
+    final saved = await s.completePurchase(
       purchase,
       branchId: remoteBranchId ?? s.resolveBranchId(storeName),
       remoteCompleted: !pendingSync,
     );
+    if (!saved) {
+      // CU-10: no se inventa una compra que no pudo asociarse al inventario.
+      // completePurchase ya mostró el motivo; se vuelve al paso de pago.
+      if (mounted) {
+        setState(() {
+          _step = 2;
+          _paying = false;
+          _payProgress = '';
+        });
+      }
+      return;
+    }
 
     // Despacha notificación de compra confirmada a la app móvil
     s.addNotification(NotificationItem(
@@ -729,8 +781,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ? 'Compra guardada sin conexión'
           : '¡Compra confirmada! Factura $invoiceNumber',
       message: pendingSync
-          ? 'Tu compra de \$${finalTotal.toStringAsFixed(2)} mediante $method quedó guardada en el dispositivo y se sincronizará automáticamente al recuperar conexión. Ref: $transactionRef.'
-          : 'Tu pago de \$${finalTotal.toStringAsFixed(2)} mediante $method fue validado exitosamente. Ref: $transactionRef.',
+          ? 'Tu compra de \$${finalTotal.toStringAsFixed(2)} mediante $effectiveMethod quedó guardada en el dispositivo y se sincronizará automáticamente al recuperar conexión. Ref: $transactionRef.'
+          : 'Tu pago de \$${finalTotal.toStringAsFixed(2)} mediante $effectiveMethod fue validado exitosamente. Ref: $transactionRef.',
       date: _fmtDate(DateTime.now()),
       type: pendingSync ? 'purchase_offline' : 'purchase_success',
       saleId: saleId ?? idNum,

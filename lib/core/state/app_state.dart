@@ -748,18 +748,84 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> completePurchase(
+  /// Devuelve `true` si la compra quedó registrada localmente (online o en la
+  /// cola offline). Devuelve `false` si no fue posible asociarla al inventario o
+  /// guardarla, en cuyo caso el carrito se conserva.
+  Future<bool> completePurchase(
     Purchase p, {
     int? branchId,
     List<Map<String, dynamic>>? saleItems,
     bool? remoteCompleted,
   }) async {
+    final storeName = p.store ?? 'Sucursal Centro';
+    final targetBranchId = branchId ?? resolveBranchId(storeName);
+
+    // Se encola cuando la app está offline o cuando el checkout remoto falló
+    // a mitad de camino: en ambos casos el backend aún no conoce la venta.
+    final mustQueue = _isOffline || remoteCompleted == false;
+
+    if (mustQueue) {
+      final items = saleItems ?? _resolveSaleItems(p, targetBranchId);
+      if (items.isEmpty) {
+        // Sin stock_id la operación nunca podrá sincronizarse. No se registra
+        // una compra fantasma: se conserva el carrito para que el cliente
+        // reintente al recuperar la red.
+        setToast(
+          'No se pudo asociar la venta al inventario central. '
+          'Tu carrito sigue intacto: reconecta y vuelve a intentar.',
+        );
+        notifyListeners();
+        return false;
+      }
+      if ((_currentUser?.tenantId ?? 0) <= 0) {
+        setToast('Inicia sesión en una empresa para guardar la venta offline.');
+        notifyListeners();
+        return false;
+      }
+
+      try {
+        final uuid = await syncManager.recordOfflineSale(
+          tenantId: _currentUser!.tenantId!,
+          branchId: targetBranchId,
+          clientId: _currentUser?.id,
+          items: items,
+          total: p.total,
+          // RN-03: sin conexión solo se cobra en efectivo.
+          paymentMethod: 'efectivo',
+        );
+        // Recién cuando la operación quedó en SQLite se registra la compra y se
+        // descuenta el stock local: así no se pierde ni se duplica la venta.
+        _registerCompletedPurchase(p, storeName);
+        setToast('Venta guardada offline (UUID: ${uuid.substring(0, 8)})');
+        return true;
+      } catch (e) {
+        setToast(
+          'No se pudo guardar la venta offline: '
+          '${e is ArgumentError ? e.message : 'error desconocido'}',
+        );
+        notifyListeners();
+        return false;
+      }
+    }
+
+    _registerCompletedPurchase(p, storeName);
+    unawaited(refreshStockFromRemote().catchError((_) {}));
+    unawaited(syncRemoteSales().catchError((_) {}));
+    notifyListeners();
+    return true;
+  }
+
+  /// Registra la compra confirmada, vacía el carrito y descuenta stock local.
+  void _registerCompletedPurchase(Purchase p, String storeName) {
     _purchases.insert(0, p);
     _cart.clear();
     _lastPurchase = p;
+    _decrementLocalStock(p, storeName);
+    notifyListeners();
+  }
 
-    // Descontar inventario de la sucursal de la que se compró
-    final storeName = p.store ?? 'Sucursal Centro';
+  /// Descuenta del espejo local de inventario las unidades recién vendidas.
+  void _decrementLocalStock(Purchase p, String storeName) {
     final branchKey = _extractBranchKey(storeName);
 
     _products = _products.map((prod) {
@@ -773,41 +839,6 @@ class AppState extends ChangeNotifier {
 
       return prod.copyWith(stock: newStock);
     }).toList();
-
-    final targetBranchId = branchId ?? resolveBranchId(storeName);
-
-    // Se encola cuando la app está offline o cuando el checkout remoto falló
-    // a mitad de camino: en ambos casos el backend aún no conoce la venta.
-    final mustQueue = _isOffline || remoteCompleted == false;
-
-    if (mustQueue) {
-      final items = saleItems ?? _resolveSaleItems(p, targetBranchId);
-      final targetTenantId = _currentUser?.tenantId ?? _selectedTenantId ?? 3;
-      final queueItems = items.isNotEmpty
-          ? items
-          : [
-              for (final it in p.items)
-                {
-                  'stock_id': (it.productId > 0 ? it.productId : 1),
-                  'quantity': it.qty,
-                  'unit_price': it.price,
-                }
-            ];
-
-      final uuid = await syncManager.recordOfflineSale(
-        tenantId: targetTenantId,
-        branchId: targetBranchId,
-        clientId: _currentUser?.id,
-        items: queueItems,
-        total: p.total,
-      );
-      setToast('Venta guardada offline (UUID: ${uuid.substring(0, 8)})');
-    } else {
-      unawaited(refreshStockFromRemote().catchError((_) {}));
-      unawaited(syncRemoteSales().catchError((_) {}));
-    }
-
-    notifyListeners();
   }
 
   List<Map<String, dynamic>> _resolveSaleItems(Purchase p, int branchId) {
