@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/kit/buttons.dart';
 import '../../../shared/kit/chips.dart';
 import '../../../shared/kit/net_image.dart';
+import '../../auth/data/models/auth_models.dart';
 
 /// Detalle de producto (espejo del `ProductDetail` del prototipo).
 class ProductDetailScreen extends StatefulWidget {
@@ -125,6 +126,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _info(AppState s) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (s.currentUser?.role == Role.administrador)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.admin_panel_settings_outlined, size: 16, color: Color(0xFF1D4ED8)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Gestión de Inventario · Vista de Administrador',
+                    style: AppTextStyles.bodySize(11, color: const Color(0xFF1D4ED8), weight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
           Text(
             p.brand.toUpperCase(),
             style: AppTextStyles.bodySize(11,
@@ -342,7 +363,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  Widget _bottomBar(AppState s) => Container(
+  Widget _bottomBar(AppState s) {
+    if (s.currentUser?.role == Role.administrador) {
+      return Container(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          12,
+          20,
+          16 + MediaQuery.paddingOf(context).bottom,
+        ),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.borderLight)),
+        ),
+        child: DButton(
+          label: 'Consultar Analítica IA de esta Prenda',
+          icon: Icons.auto_awesome,
+          tone: DButtonTone.accent,
+          expanded: true,
+          size: DButtonSize.lg,
+          onPressed: () {
+            widget.onBack();
+            s.openOverlay(OverlayScreen.aiReport);
+          },
+        ),
+      );
+    }
+
+    return Container(
         padding: EdgeInsets.fromLTRB(
           20,
           12,
@@ -363,4 +411,5 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           onPressed: _size == null ? null : () => _add(s),
         ),
       );
+  }
 }

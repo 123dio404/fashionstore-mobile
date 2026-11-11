@@ -9,8 +9,11 @@ class CatalogRepository {
 
   CatalogRepository({ApiClient? client}) : _dio = (client ?? ApiClient()).dio;
 
-  Future<List<ProductResponse>> products() async {
-    final response = await _dio.get(ApiConstants.products);
+  Future<List<ProductResponse>> products({int? tenantId}) async {
+    final response = await _dio.get(
+      ApiConstants.products,
+      queryParameters: tenantId != null ? {'tenant_id': tenantId} : null,
+    );
     return (response.data as List<dynamic>)
         .map((item) => ProductResponse.fromJson(item as Map<String, dynamic>))
         .toList();

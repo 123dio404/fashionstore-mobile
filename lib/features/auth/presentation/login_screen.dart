@@ -399,56 +399,128 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       );
 
-  Widget _demoCard() => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'CUENTAS DEMO (CONTRASEÑA Admin123)',
-              style: AppTextStyles.bodySize(10,
+  Widget _demoCard() {
+    const demos = [
+      (
+        'Moda Urbana (Streetwear)',
+        [
+          ('Admin', 'admin@urbanstyle.com'),
+          ('Cajero', 'cajero@urbanstyle.com'),
+          ('Cliente', 'cliente@urbanstyle.com'),
+        ]
+      ),
+      (
+        'Mundo Medias (Calcetería)',
+        [
+          ('Admin', 'admin@mundomedias.com'),
+          ('Cajero', 'cajero@mundomedias.com'),
+          ('Cliente', 'cliente@mundomedias.com'),
+        ]
+      ),
+      (
+        'Tenis Urbanos (Sneakers)',
+        [
+          ('Admin', 'admin@tenisurbanos.com'),
+          ('Cajero', 'cajero@tenisurbanos.com'),
+          ('Cliente', 'cliente@tenisurbanos.com'),
+        ]
+      ),
+      (
+        'SportActive (Deportivo)',
+        [
+          ('Admin', 'admin@sportactive.com'),
+          ('Cajero', 'cajero@sportactive.com'),
+          ('Cliente', 'cliente@sportactive.com'),
+        ]
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'ACCESO RÁPIDO EVALUACIÓN',
+                style: AppTextStyles.bodySize(
+                  10,
                   color: AppColors.muted,
                   weight: FontWeight.w700,
-                  letterSpacing: 0.6),
+                  letterSpacing: 0.6,
+                ),
+              ),
+              Text(
+                'Clave: Admin123',
+                style: AppTextStyles.bodySize(
+                  10,
+                  color: AppColors.accent,
+                  weight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final (storeName, accounts) in demos) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 6, bottom: 4),
+              child: Text(
+                storeName,
+                style: AppTextStyles.bodySize(11, weight: FontWeight.w700),
+              ),
             ),
-            const SizedBox(height: 8),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 6,
               children: [
-                for (final mail in const [
-                  'cliente@fashionstore.com',
-                  'admin@fashionstore.com',
-                  'cliente@mundomedias.com',
-                  'admin@mundomedias.com',
-                  'cliente@tenisurbanos.com',
-                  'admin@elegancefashion.com',
-                ])
+                for (final (roleLabel, email) in accounts)
                   GestureDetector(
-                    onTap: () => _useDemo(mail),
+                    onTap: () => _useDemo(email),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: AppColors.accentSoft,
+                        color: roleLabel == 'Admin'
+                            ? const Color(0xFFEFF6FF)
+                            : (roleLabel == 'Cajero'
+                                ? const Color(0xFFECFDF5)
+                                : AppColors.accentSoft),
                         borderRadius: BorderRadius.circular(AppRadius.pill),
+                        border: Border.all(
+                          color: roleLabel == 'Admin'
+                              ? const Color(0xFFBFDBFE)
+                              : (roleLabel == 'Cajero'
+                                  ? const Color(0xFFA7F3D0)
+                                  : AppColors.accent.withValues(alpha: 0.3)),
+                        ),
                       ),
                       child: Text(
-                        '${mail.split('@').first} (${mail.split('@').last.split('.').first})',
-                        style: AppTextStyles.bodySize(11,
-                            color: AppColors.accentDark, weight: FontWeight.w600),
+                        roleLabel,
+                        style: AppTextStyles.bodySize(
+                          11,
+                          color: roleLabel == 'Admin'
+                              ? const Color(0xFF1D4ED8)
+                              : (roleLabel == 'Cajero'
+                                  ? const Color(0xFF047857)
+                                  : AppColors.accentDark),
+                          weight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
               ],
             ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 
   Widget _social(String label, IconData icon) => GestureDetector(
         onTap: () => _useDemo('cliente@fashionstore.com'),

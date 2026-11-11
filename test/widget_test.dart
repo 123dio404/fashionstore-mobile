@@ -259,7 +259,7 @@ void main() {
     state.setOffline(true);
     expect(state.isOffline, isTrue);
 
-    final purchase = Purchase(
+    const purchase = Purchase(
       id: 'ORD-TEST-OFFLINE',
       date: '2026-10-21',
       status: 'completado',
@@ -269,7 +269,7 @@ void main() {
       paymentMethod: 'Offline SQLite',
       deliveryMethod: 'pickup',
       store: 'Sucursal Centro',
-      items: const [
+      items: [
         PurchaseItem(
           productId: 1,
           name: 'Blazer Oversize Lana',
@@ -290,7 +290,7 @@ void main() {
   });
 
   test('RN-02: validacion de politica de cambio de prendas (plazo 30 dias)', () {
-    final purchaseRecent = Purchase(
+    const purchaseRecent = Purchase(
       id: 'ORD-RECENT',
       date: '2026-10-20',
       status: 'completado',
@@ -299,7 +299,7 @@ void main() {
       shipping: 0.0,
       paymentMethod: 'Tarjeta',
       deliveryMethod: 'pickup',
-      items: const [
+      items: [
         PurchaseItem(
           productId: 1,
           name: 'Blazer',

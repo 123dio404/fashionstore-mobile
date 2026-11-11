@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/fashion_models.dart';
 import '../../core/theme/app_theme.dart';
+import '../../features/auth/data/models/auth_models.dart';
 
-/// Barra de navegación inferior con 5 pestañas y badges.
+/// Barra de navegación inferior adaptativa según el rol (Cliente vs Administrador vs Cajero).
 class BottomNav extends StatelessWidget {
   const BottomNav({
     super.key,
@@ -11,20 +12,41 @@ class BottomNav extends StatelessWidget {
     required this.onTab,
     this.cartCount = 0,
     this.reservCount = 0,
+    this.role,
   });
 
   final AppTab active;
   final ValueChanged<AppTab> onTab;
   final int cartCount;
   final int reservCount;
+  final Role? role;
 
-  static const _tabs = <(AppTab, String, IconData)>[
-    (AppTab.home, 'Inicio', Icons.home_outlined),
-    (AppTab.catalog, 'Catálogo', Icons.grid_view_outlined),
-    (AppTab.reservations, 'Reservas', Icons.calendar_today_outlined),
-    (AppTab.cart, 'Carrito', Icons.shopping_bag_outlined),
-    (AppTab.profile, 'Perfil', Icons.person_outline),
-  ];
+  List<(AppTab, String, IconData)> get _tabs {
+    if (role == Role.administrador) {
+      return const <(AppTab, String, IconData)>[
+        (AppTab.home, 'Panel', Icons.dashboard_outlined),
+        (AppTab.catalog, 'Stock', Icons.inventory_2_outlined),
+        (AppTab.reservations, 'Reservas', Icons.storefront_outlined),
+        (AppTab.cart, 'Reportes IA', Icons.auto_awesome_outlined),
+        (AppTab.profile, 'Admin', Icons.admin_panel_settings_outlined),
+      ];
+    }
+    if (role == Role.cajero) {
+      return const <(AppTab, String, IconData)>[
+        (AppTab.catalog, 'Catálogo', Icons.grid_view_outlined),
+        (AppTab.reservations, 'Entregas', Icons.receipt_long_outlined),
+        (AppTab.cart, 'Sync Offline', Icons.sync_outlined),
+        (AppTab.profile, 'Turno', Icons.account_circle_outlined),
+      ];
+    }
+    return const <(AppTab, String, IconData)>[
+      (AppTab.home, 'Inicio', Icons.home_outlined),
+      (AppTab.catalog, 'Catálogo', Icons.grid_view_outlined),
+      (AppTab.reservations, 'Reservas', Icons.calendar_today_outlined),
+      (AppTab.cart, 'Carrito', Icons.shopping_bag_outlined),
+      (AppTab.profile, 'Perfil', Icons.person_outline),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +63,7 @@ class BottomNav extends StatelessWidget {
         children: _tabs.map((t) {
           final (tab, label, icon) = t;
           final badge = switch (tab) {
-            AppTab.cart => cartCount,
+            AppTab.cart => role == Role.administrador || role == Role.cajero ? 0 : cartCount,
             AppTab.reservations => reservCount,
             _ => 0,
           };

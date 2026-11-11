@@ -142,13 +142,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: AppTextStyles.bodySize(12,
                             color: AppColors.muted)),
                     const SizedBox(height: 6),
-                    ToneBadge(
-                      label: role,
-                      tone: role == 'Administrador'
-                          ? BadgeTone.neutral
-                          : (role == 'Cajero'
-                              ? BadgeTone.success
-                              : BadgeTone.accent),
+                    Row(
+                      children: [
+                        ToneBadge(
+                          label: role,
+                          tone: role == 'Administrador'
+                              ? BadgeTone.neutral
+                              : (role == 'Cajero'
+                                  ? BadgeTone.success
+                                  : BadgeTone.accent),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentSoft,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            s.selectedTenantName,
+                            style: AppTextStyles.bodySize(10, color: AppColors.accentDark, weight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -408,6 +424,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String email,
     required String name,
     required Role role,
+    int? tenantId,
+    String? tenantName,
   }) {
     s.setCurrentUser(UserResponse(
       id: id,
@@ -415,6 +433,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       fullName: name,
       role: role,
       isActive: true,
+      tenantId: tenantId ?? s.selectedTenantId,
+      tenantName: tenantName ?? s.selectedTenantName,
     ));
     s.refreshStockFromRemote();
     s.syncRemoteSales();

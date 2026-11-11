@@ -7,8 +7,10 @@ import '../core/state/app_state.dart';
 import '../core/theme/app_theme.dart';
 import '../shared/kit/bottom_nav.dart';
 import '../shared/kit/nav.dart';
+import 'admin/admin_dashboard_screen.dart';
 import 'ai/ai_recommendations_screen.dart';
 import 'ar/ar_fitter_screen.dart';
+import 'auth/data/models/auth_models.dart';
 import 'cart/cart_screen.dart';
 import 'catalog/presentation/catalog_screen.dart';
 import 'catalog/presentation/product_detail_screen.dart';
@@ -51,6 +53,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
     final showNav = _detail == null && s.overlay == OverlayScreen.none;
+    final role = s.currentUser?.role;
 
     final Widget body;
     if (_detail != null) {
@@ -62,6 +65,21 @@ class _AppShellState extends State<AppShell> {
         product: currentProd,
         onBack: () => setState(() => _detail = null),
       );
+    } else if (role == Role.administrador) {
+      body = switch (s.tab) {
+        AppTab.home => AdminDashboardScreen(onOpenProduct: _openProduct),
+        AppTab.catalog => CatalogScreen(onOpenProduct: _openProduct),
+        AppTab.reservations => const ReservationsScreen(),
+        AppTab.cart => const AiReportScreen(),
+        AppTab.profile => const ProfileScreen(),
+      };
+    } else if (role == Role.cajero) {
+      body = switch (s.tab) {
+        AppTab.home || AppTab.catalog => CatalogScreen(onOpenProduct: _openProduct),
+        AppTab.reservations => const ReservationsScreen(),
+        AppTab.cart => const SyncQueueScreen(),
+        AppTab.profile => const ProfileScreen(),
+      };
     } else {
       body = switch (s.tab) {
         AppTab.home => HomeScreen(onOpenProduct: _openProduct),
@@ -115,12 +133,20 @@ class _AppShellState extends State<AppShell> {
                     onTab: s.setTab,
                     cartCount: s.cartCount,
                     reservCount: s.reservCount,
+                    role: role,
                   ),
               ],
             ),
             if (s.overlay != OverlayScreen.none)
               Positioned.fill(
                 child: ColoredBox(color: AppColors.background, child: _overlay(s)),
+              ),
+            if (s.activePushBanner != null)
+              Positioned(
+                top: MediaQuery.paddingOf(context).top + 8,
+                left: 14,
+                right: 14,
+                child: _pushBanner(context, s, s.activePushBanner!),
               ),
             if (s.toast != null)
               Positioned(
@@ -159,6 +185,109 @@ class _AppShellState extends State<AppShell> {
         OverlayScreen.stateDemo => const StateDemoScreen(),
         OverlayScreen.none => const SizedBox.shrink(),
       };
+
+  Widget _pushBanner(BuildContext context, AppState s, NotificationItem item) {
+    return Material(
+      color: Colors.transparent,
+      child: GestureDetector(
+        onTap: () {
+          s.dismissPushBanner();
+          s.openOverlay(OverlayScreen.notifications);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.dark,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.accent.withValues(alpha: 0.6), width: 1.5),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 16,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.notifications_active, color: AppColors.accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'NOTIFICACIÓN PUSH',
+                          style: AppTextStyles.bodySize(
+                            10,
+                            color: AppColors.accent,
+                            weight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          'Ahora',
+                          style: AppTextStyles.bodySize(
+                            10,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.title,
+                      style: AppTextStyles.bodySize(
+                        13,
+                        color: Colors.white,
+                        weight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      item.message,
+                      style: AppTextStyles.bodySize(
+                        11,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: s.dismissPushBanner,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, size: 16, color: Colors.white70),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Pantalla demo de estados (se abre desde Perfil).
